@@ -17,7 +17,7 @@ const (
 )
 
 type Metadata struct {
-	RequestId  string
+	RequestID  string
 	Host       string
 	Method     string
 	Path       string
@@ -49,7 +49,7 @@ type FailureJob struct {
 }
 
 func NewRequestJob(r *http.Request, upstream string, start time.Time) *RequestJob {
-	requestId := getOrCreateRequestId(r)
+	requestId := getOrCreateRequestID(r)
 
 	host := r.Header.Get("X-Original-Host")
 	if host == "" {
@@ -59,7 +59,7 @@ func NewRequestJob(r *http.Request, upstream string, start time.Time) *RequestJo
 	return &RequestJob{
 		Type: RequestJobType,
 		Meta: Metadata{
-			RequestId: requestId,
+			RequestID: requestId,
 			Host:      host,
 			Method:    r.Method,
 			Path:      r.URL.Path,
@@ -67,12 +67,12 @@ func NewRequestJob(r *http.Request, upstream string, start time.Time) *RequestJo
 			Upstream:  upstream,
 			Timestamp: start,
 		},
-		Headers: cloneHeader(r.Header),
+		Headers: r.Header.Clone(),
 	}
 }
 
 func NewResponseJob(r *http.Response, upstream string) *ResponseJob {
-	requestId := getOrCreateRequestId(r.Request)
+	requestId := getOrCreateRequestID(r.Request)
 
 	start, _ := time.Parse(time.RFC3339Nano, r.Request.Header.Get("X-Request-Timestamp"))
 
@@ -89,7 +89,7 @@ func NewResponseJob(r *http.Response, upstream string) *ResponseJob {
 	return &ResponseJob{
 		Type: ResponseJobType,
 		Meta: Metadata{
-			RequestId:  requestId,
+			RequestID:  requestId,
 			Host:       host,
 			Method:     r.Request.Method,
 			Path:       r.Request.URL.Path,
@@ -99,12 +99,12 @@ func NewResponseJob(r *http.Response, upstream string) *ResponseJob {
 			Timestamp:  time.Now().UTC(),
 			DurationMs: duration,
 		},
-		Headers: cloneHeader(r.Header),
+		Headers: r.Header.Clone(),
 	}
 }
 
 func NewFailureJob(r *http.Request, upstream string, err error) *FailureJob {
-	requestId := getOrCreateRequestId(r)
+	requestId := getOrCreateRequestID(r)
 
 	status := http.StatusBadGateway
 	if ne, ok := err.(net.Error); ok && ne.Timeout() {
@@ -126,7 +126,7 @@ func NewFailureJob(r *http.Request, upstream string, err error) *FailureJob {
 	return &FailureJob{
 		Type: FailureJobType,
 		Meta: Metadata{
-			RequestId:  requestId,
+			RequestID:  requestId,
 			Host:       host,
 			Method:     r.Method,
 			Path:       r.URL.Path,
@@ -140,35 +140,23 @@ func NewFailureJob(r *http.Request, upstream string, err error) *FailureJob {
 	}
 }
 
-func getOrCreateRequestId(r *http.Request) string {
-	if r.Header == nil {
-		r.Header = make(http.Header)
+func getOrCreateRequestID(r *http.Request) string {
+	if r == nil || r.Header == nil {
+		return newRequestID()
 	}
 
-	id := r.Header.Get("X-Request-ID")
-	if id == "" {
-		id = newRequestId()
-		r.Header.Set("X-Request-ID", id)
+	if id := r.Header.Get("X-Request-ID"); id != "" {
+		return id
 	}
 
-	return id
+	return newRequestID()
 }
 
-func newRequestId() string {
+func newRequestID() string {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err == nil {
 		return hex.EncodeToString(b[:])
 	}
 
 	return time.Now().UTC().Format("20060102150405.000000000")
-}
-
-func cloneHeader(h http.Header) map[string][]string {
-	out := make(map[string][]string, len(h))
-	for k, v := range h {
-		cp := make([]string, len(v))
-		copy(cp, v)
-		out[k] = cp
-	}
-	return out
 }
