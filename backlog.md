@@ -30,7 +30,7 @@
 - [x] Implement in-memory queue for audit jobs
 - [x] Implement enqueue operation
 - [x] Support safe concurrent access
-- [ ] Handle graceful shutdown
+- [x] Handle graceful shutdown
 
 ### Proxy → Queue Integration
 

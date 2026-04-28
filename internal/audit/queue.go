@@ -2,6 +2,7 @@ package audit
 
 import (
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -19,7 +20,7 @@ func (r RequestJob) JobType() JobType {
 }
 
 func (r RequestJob) Process() {
-	fmt.Println("Processing Request Job: %v", r)
+	fmt.Printf("\nProcessing Request Job: %v", r)
 }
 
 func (r ResponseJob) JobType() JobType {
@@ -27,7 +28,7 @@ func (r ResponseJob) JobType() JobType {
 }
 
 func (r ResponseJob) Process() {
-	fmt.Println("Processing Response Job: %v", r)
+	fmt.Printf("\nProcessing Response Job: %v", r)
 }
 
 func (r FailureJob) JobType() JobType {
@@ -35,7 +36,7 @@ func (r FailureJob) JobType() JobType {
 }
 
 func (r FailureJob) Process() {
-	fmt.Println("Processing Failure Job: %v", r)
+	fmt.Printf("\nProcessing Failure Job: %v", r)
 }
 
 func worker(id int, queue <-chan Job, wg *sync.WaitGroup) {
@@ -53,19 +54,46 @@ func NewQueue(size int) *Queue {
 	}
 }
 
-func (q *Queue) Enqueue(job Job) {
-	q.jobs <- job
+func (q *Queue) TryEnqueue(job Job) bool {
+	select {
+	case q.jobs <- job:
+		return true
+	default:
+		return false
+	}
 }
 
-func (q *Queue) StartWorkers(n int) *sync.WaitGroup {
+func (q *Queue) StartWorkers(count int, logger *log.Logger) *sync.WaitGroup {
 	var wg sync.WaitGroup
 
-	for i := 0; i < n; i++ {
+	for i := 0; i < count; i++ {
 		wg.Add(1)
-		go worker(i, q.jobs, &wg)
+
+		go func(workerID int) {
+			defer wg.Done()
+
+			for job := range q.jobs {
+				logger.Printf("audit worker %d handling %s", workerID, job.JobType())
+
+				if err := ProcessJob(job); err != nil {
+					logger.Printf("audit worker %d failed to process job: %v", workerID, err)
+				}
+			}
+
+			logger.Printf("audit worker %d queue closed", workerID)
+		}(i)
 	}
 
 	return &wg
+}
+
+func ProcessJob(job Job) error {
+	if job == nil {
+		return fmt.Errorf("nil audit job")
+	}
+
+	job.Process()
+	return nil
 }
 
 func (q *Queue) Close() {
