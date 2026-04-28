@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"cf-observer/internal/audit"
 	"cf-observer/internal/config"
 	"cf-observer/internal/proxy"
 	"errors"
@@ -24,6 +25,11 @@ func RunDaemon(hosts map[string]config.Host) error {
 	if err != nil {
 		return fmt.Errorf("create proxy manager: %w", err)
 	}
+
+	queue := audit.NewQueue(config.AppRunTimeConfig.AuditConfig.QueueSize)
+	wg := queue.StartWorkers(config.AppRunTimeConfig.AuditConfig.Workers)
+	defer queue.Close()
+	wg.Wait()
 
 	server := &http.Server{
 		Addr:              config.AppRunTimeConfig.Listen,

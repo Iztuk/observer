@@ -27,10 +27,9 @@
 
 ### Queue Layer
 
-- [ ] Implement in-memory queue for audit jobs
-- [ ] Implement enqueue operation
-- [ ] Implement dequeue operation
-- [ ] Support safe concurrent access
+- [x] Implement in-memory queue for audit jobs
+- [x] Implement enqueue operation
+- [x] Support safe concurrent access
 - [ ] Handle graceful shutdown
 
 ### Proxy → Queue Integration
