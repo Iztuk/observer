@@ -1,10 +1,13 @@
 package audit
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
+	"io"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -48,8 +51,25 @@ type FailureJob struct {
 	Error string
 }
 
+type CapturingBody struct {
+	reader io.Reader
+	closer io.Closer
+
+	buf  bytes.Buffer
+	once sync.Once
+	done func([]byte)
+}
+
+// NOTE:
+// We read the full request/response body here to capture it for auditing,
+// then restore the body so the proxy/client can continue using it.
+// This is synchronous and may add latency and memory overhead for large payloads.
+// Future work:
+//   - add a configurable max body size
+//   - move body capture to the worker layer
+//   - or use a streaming (io.TeeReader) approach to avoid full buffering
 func NewRequestJob(r *http.Request, upstream string, start time.Time) *RequestJob {
-	requestId := getOrCreateRequestID(r)
+	requestID := getOrCreateRequestID(r)
 
 	host := r.Header.Get("X-Original-Host")
 	if host == "" {
@@ -59,7 +79,7 @@ func NewRequestJob(r *http.Request, upstream string, start time.Time) *RequestJo
 	return &RequestJob{
 		Type: RequestJobType,
 		Meta: Metadata{
-			RequestID: requestId,
+			RequestID: requestID,
 			Host:      host,
 			Method:    r.Method,
 			Path:      r.URL.Path,
@@ -72,12 +92,11 @@ func NewRequestJob(r *http.Request, upstream string, start time.Time) *RequestJo
 }
 
 func NewResponseJob(r *http.Response, upstream string) *ResponseJob {
-	requestId := getOrCreateRequestID(r.Request)
-
-	start, _ := time.Parse(time.RFC3339Nano, r.Request.Header.Get("X-Request-Timestamp"))
+	requestID := getOrCreateRequestID(r.Request)
 
 	var duration int64
-	if !start.IsZero() {
+	start, err := time.Parse(time.RFC3339Nano, r.Request.Header.Get("X-Request-Timestamp"))
+	if err == nil {
 		duration = time.Since(start).Milliseconds()
 	}
 
@@ -89,7 +108,7 @@ func NewResponseJob(r *http.Response, upstream string) *ResponseJob {
 	return &ResponseJob{
 		Type: ResponseJobType,
 		Meta: Metadata{
-			RequestID:  requestId,
+			RequestID:  requestID,
 			Host:       host,
 			Method:     r.Request.Method,
 			Path:       r.Request.URL.Path,
@@ -104,7 +123,7 @@ func NewResponseJob(r *http.Response, upstream string) *ResponseJob {
 }
 
 func NewFailureJob(r *http.Request, upstream string, err error) *FailureJob {
-	requestId := getOrCreateRequestID(r)
+	requestID := getOrCreateRequestID(r)
 
 	status := http.StatusBadGateway
 	if ne, ok := err.(net.Error); ok && ne.Timeout() {
@@ -114,7 +133,8 @@ func NewFailureJob(r *http.Request, upstream string, err error) *FailureJob {
 	start, _ := time.Parse(time.RFC3339Nano, r.Header.Get("X-Request-Timestamp"))
 
 	var duration int64
-	if !start.IsZero() {
+	start, parseErr := time.Parse(time.RFC3339Nano, r.Header.Get("X-Request-Timestamp"))
+	if parseErr == nil {
 		duration = time.Since(start).Milliseconds()
 	}
 
@@ -126,7 +146,7 @@ func NewFailureJob(r *http.Request, upstream string, err error) *FailureJob {
 	return &FailureJob{
 		Type: FailureJobType,
 		Meta: Metadata{
-			RequestID:  requestId,
+			RequestID:  requestID,
 			Host:       host,
 			Method:     r.Method,
 			Path:       r.URL.Path,
@@ -138,6 +158,41 @@ func NewFailureJob(r *http.Request, upstream string, err error) *FailureJob {
 		},
 		Error: err.Error(),
 	}
+}
+
+func NewCapturingBody(body io.ReadCloser, done func([]byte)) *CapturingBody {
+	cb := &CapturingBody{
+		closer: body,
+		done:   done,
+	}
+
+	cb.reader = io.TeeReader(body, &cb.buf)
+
+	return cb
+}
+
+func (c *CapturingBody) Read(p []byte) (int, error) {
+	n, err := c.reader.Read(p)
+
+	if err == io.EOF {
+		c.finish()
+	}
+
+	return n, err
+}
+
+func (c *CapturingBody) Close() error {
+	c.finish()
+	return c.closer.Close()
+}
+
+func (c *CapturingBody) finish() {
+	c.once.Do(func() {
+		if c.done != nil {
+			bodyCopy := append([]byte(nil), c.buf.Bytes()...)
+			c.done(bodyCopy)
+		}
+	})
 }
 
 func getOrCreateRequestID(r *http.Request) string {

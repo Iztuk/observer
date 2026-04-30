@@ -1,11 +1,11 @@
 package proxy
 
 import (
+	"cf-observer/internal/audit"
 	"cf-observer/internal/config"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -50,7 +50,7 @@ type Observation struct {
 }
 
 // TODO: Move the observation logging to the audit layer
-func NewProxyManager(hosts map[string]config.Host, logger *log.Logger) (*ProxyManager, error) {
+func NewProxyManager(hosts map[string]config.Host, queue *audit.Queue, logger *log.Logger) (*ProxyManager, error) {
 	pm := &ProxyManager{
 		Hosts:  make(map[string]*ProxyTarget),
 		Logger: logger,
@@ -75,49 +75,41 @@ func NewProxyManager(hosts map[string]config.Host, logger *log.Logger) (*ProxyMa
 				start := time.Now().UTC()
 				pr.Out.Header.Set("X-Request-Timestamp", start.Format(time.RFC3339Nano))
 
-				requestID := getOrCreateProxyRequestID(pr)
+				getOrCreateProxyRequestID(pr)
 
-				obs := &Observation{
-					Timestamp:      time.Now().UTC(),
-					Event:          "request_started",
-					RequestID:      requestID,
-					Host:           originalHost,
-					Method:         pr.In.Method,
-					Path:           pr.In.URL.Path,
-					Query:          pr.In.URL.RawQuery,
-					Upstream:       h.Upstream.String(),
-					RequestHeaders: pr.In.Header.Clone(),
+				job := audit.NewRequestJob(pr.Out, h.Upstream.String(), start)
+
+				if pr.Out.Body != nil {
+					pr.Out.Body = audit.NewCapturingBody(pr.Out.Body, func(b []byte) {
+						job.Body = b
+
+						if !queue.TryEnqueue(job) {
+							logger.Printf("audit queue full; dropping request job")
+						}
+					})
+				} else {
+					if !queue.TryEnqueue(job) {
+						logger.Printf("audit queue full; dropping request job")
+					}
 				}
 
-				writeObservation(logger, obs)
 			},
 			ModifyResponse: func(r *http.Response) error {
-				requestID := getOrCreateRequestID(r.Request)
+				job := audit.NewResponseJob(r, h.Upstream.String())
 
-				event := "response_received"
+				if r.Body != nil {
+					r.Body = audit.NewCapturingBody(r.Body, func(b []byte) {
+						job.Body = b
 
-				start, err := time.Parse(time.RFC3339Nano, r.Request.Header.Get("X-Request-Timestamp"))
-
-				var durationMs int64
-				if err == nil {
-					durationMs = time.Since(start).Milliseconds()
+						if !queue.TryEnqueue(job) {
+							logger.Printf("audit queue full; dropping response job")
+						}
+					})
+				} else {
+					if !queue.TryEnqueue(job) {
+						logger.Printf("audit queue full; dropping response job")
+					}
 				}
-
-				obs := &Observation{
-					Timestamp:       time.Now().UTC(),
-					Event:           event,
-					RequestID:       requestID,
-					Host:            r.Request.Header.Get("X-Original-Host"),
-					Method:          r.Request.Method,
-					Path:            r.Request.URL.Path,
-					Query:           r.Request.URL.RawQuery,
-					Upstream:        h.Upstream.String(),
-					Status:          r.StatusCode,
-					DurationMs:      durationMs,
-					ResponseHeaders: r.Header.Clone(),
-				}
-
-				writeObservation(logger, obs)
 
 				return nil
 			},
@@ -128,41 +120,13 @@ func NewProxyManager(hosts map[string]config.Host, logger *log.Logger) (*ProxyMa
 				}).DialContext,
 			},
 			ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
-				requestID := getOrCreateRequestID(r)
+				job := audit.NewFailureJob(r, h.Upstream.String(), err)
 
-				event := "proxy_error"
-				status := http.StatusBadGateway
-
-				var ne net.Error
-				if errors.As(err, &ne) && ne.Timeout() {
-					event = "proxy_timeout"
-					status = http.StatusGatewayTimeout
+				if !queue.TryEnqueue(job) {
+					logger.Printf("audit queue full; dropping failure job")
 				}
 
-				start, parseErr := time.Parse(time.RFC3339Nano, r.Header.Get("X-Request-Timestamp"))
-
-				var durationMs int64
-				if parseErr == nil {
-					durationMs = time.Since(start).Milliseconds()
-				}
-
-				obs := &Observation{
-					Timestamp:  time.Now().UTC(),
-					Event:      event,
-					RequestID:  requestID,
-					Host:       r.Header.Get("X-Original-Host"),
-					Method:     r.Method,
-					Status:     status,
-					Path:       r.URL.Path,
-					Query:      r.URL.RawQuery,
-					Upstream:   h.Upstream.String(),
-					DurationMs: durationMs,
-					Error:      err.Error(),
-				}
-
-				writeObservation(logger, obs)
-
-				http.Error(w, http.StatusText(status), status)
+				http.Error(w, http.StatusText(job.Meta.Status), job.Meta.Status)
 			},
 		}
 

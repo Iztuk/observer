@@ -40,7 +40,7 @@ func RunDaemon(hosts map[string]config.Host) error {
 		wg.Wait()
 	}()
 
-	pm, err := proxy.NewProxyManager(hosts, logger)
+	pm, err := proxy.NewProxyManager(hosts, queue, logger)
 	if err != nil {
 		return fmt.Errorf("create proxy manager: %w", err)
 	}

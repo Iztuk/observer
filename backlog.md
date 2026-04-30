@@ -34,10 +34,10 @@
 
 ### Proxy → Queue Integration
 
-- [ ] Enqueue request audit job before forwarding upstream
-- [ ] Enqueue response audit job after receiving response
-- [ ] Enqueue failure audit job on upstream error
-- [ ] Ensure queue operations do not block proxy path
+- [x] Enqueue request audit job before forwarding upstream
+- [x] Enqueue response audit job after receiving response
+- [x] Enqueue failure audit job on upstream error
+- [x] Ensure queue operations do not block proxy path
 
 ### Worker Layer
 
