@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -100,41 +99,13 @@ func NewProxyManager(hosts map[string]config.Host, queue *audit.Queue, logger *l
 				}).DialContext,
 			},
 			ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
-				requestID := getOrCreateRequestID(r)
+				job := audit.NewFailureJob(r, h.Upstream.String(), err)
 
-				event := "proxy_error"
-				status := http.StatusBadGateway
-
-				var ne net.Error
-				if errors.As(err, &ne) && ne.Timeout() {
-					event = "proxy_timeout"
-					status = http.StatusGatewayTimeout
+				if !queue.TryEnqueue(job) {
+					logger.Printf("audit queue full; dropping failure job")
 				}
 
-				start, parseErr := time.Parse(time.RFC3339Nano, r.Header.Get("X-Request-Timestamp"))
-
-				var durationMs int64
-				if parseErr == nil {
-					durationMs = time.Since(start).Milliseconds()
-				}
-
-				obs := &Observation{
-					Timestamp:  time.Now().UTC(),
-					Event:      event,
-					RequestID:  requestID,
-					Host:       r.Header.Get("X-Original-Host"),
-					Method:     r.Method,
-					Status:     status,
-					Path:       r.URL.Path,
-					Query:      r.URL.RawQuery,
-					Upstream:   h.Upstream.String(),
-					DurationMs: durationMs,
-					Error:      err.Error(),
-				}
-
-				writeObservation(logger, obs)
-
-				http.Error(w, http.StatusText(status), status)
+				http.Error(w, http.StatusText(job.Meta.Status), job.Meta.Status)
 			},
 		}
 

@@ -50,7 +50,14 @@ type FailureJob struct {
 	Error string
 }
 
-// TODO: Add a user configurable limit to the request/response bodies
+// NOTE:
+// We read the full request/response body here to capture it for auditing,
+// then restore the body so the proxy/client can continue using it.
+// This is synchronous and may add latency and memory overhead for large payloads.
+// Future work:
+//   - add a configurable max body size
+//   - move body capture to the worker layer
+//   - or use a streaming (io.TeeReader) approach to avoid full buffering
 func NewRequestJob(r *http.Request, upstream string, start time.Time) *RequestJob {
 	requestID := getOrCreateRequestID(r)
 
@@ -140,7 +147,8 @@ func NewFailureJob(r *http.Request, upstream string, err error) *FailureJob {
 	start, _ := time.Parse(time.RFC3339Nano, r.Header.Get("X-Request-Timestamp"))
 
 	var duration int64
-	if !start.IsZero() {
+	start, parseErr := time.Parse(time.RFC3339Nano, r.Header.Get("X-Request-Timestamp"))
+	if parseErr == nil {
 		duration = time.Since(start).Milliseconds()
 	}
 
