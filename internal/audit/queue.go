@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"runtime/debug"
@@ -11,7 +12,7 @@ import (
 
 type Job interface {
 	JobType() JobType
-	Process(e *RuleEngine) error
+	Process(c context.Context, e *RuleEngine) error
 }
 
 type Queue struct {
@@ -25,7 +26,7 @@ func (r *RequestJob) JobType() JobType {
 	return RequestJobType
 }
 
-func (r *RequestJob) Process(engine *RuleEngine) error {
+func (r *RequestJob) Process(ctx context.Context, engine *RuleEngine) error {
 	jobID := uuid.NewString()
 
 	findings, err := engine.Evaluate(r, jobID)
@@ -37,14 +38,14 @@ func (r *RequestJob) Process(engine *RuleEngine) error {
 		return nil
 	}
 
-	return DatabaseStore.SaveAuditResult(r, jobID, findings)
+	return DatabaseStore.SaveAuditResult(ctx, r, jobID, findings)
 }
 
 func (r *ResponseJob) JobType() JobType {
 	return ResponseJobType
 }
 
-func (r *ResponseJob) Process(engine *RuleEngine) error {
+func (r *ResponseJob) Process(ctx context.Context, engine *RuleEngine) error {
 	jobID := uuid.NewString()
 
 	findings, err := engine.Evaluate(r, jobID)
@@ -56,14 +57,14 @@ func (r *ResponseJob) Process(engine *RuleEngine) error {
 		return nil
 	}
 
-	return DatabaseStore.SaveAuditResult(r, jobID, findings)
+	return DatabaseStore.SaveAuditResult(ctx, r, jobID, findings)
 }
 
 func (r *FailureJob) JobType() JobType {
 	return FailureJobType
 }
 
-func (r *FailureJob) Process(engine *RuleEngine) error {
+func (r *FailureJob) Process(ctx context.Context, engine *RuleEngine) error {
 	jobID := uuid.NewString()
 
 	findings, err := engine.Evaluate(r, jobID)
@@ -75,7 +76,7 @@ func (r *FailureJob) Process(engine *RuleEngine) error {
 		return nil
 	}
 
-	return DatabaseStore.SaveAuditResult(r, jobID, findings)
+	return DatabaseStore.SaveAuditResult(ctx, r, jobID, findings)
 }
 
 func NewQueue(size int) *Queue {
@@ -104,7 +105,7 @@ func (q *Queue) TryEnqueue(job Job) bool {
 	}
 }
 
-func (q *Queue) StartWorkers(count int, logger *log.Logger, engine *RuleEngine) *sync.WaitGroup {
+func (q *Queue) StartWorkers(ctx context.Context, count int, logger *log.Logger, engine *RuleEngine) *sync.WaitGroup {
 	var wg sync.WaitGroup
 
 	for i := 0; i < count; i++ {
@@ -126,7 +127,7 @@ func (q *Queue) StartWorkers(count int, logger *log.Logger, engine *RuleEngine) 
 						}
 					}()
 
-					if err := ProcessJob(job, engine); err != nil {
+					if err := ProcessJob(ctx, job, engine); err != nil {
 						logger.Printf("audit worker %d failed to process job: %v", workerID, err)
 					}
 				}()
@@ -139,12 +140,12 @@ func (q *Queue) StartWorkers(count int, logger *log.Logger, engine *RuleEngine) 
 	return &wg
 }
 
-func ProcessJob(job Job, engine *RuleEngine) error {
+func ProcessJob(ctx context.Context, job Job, engine *RuleEngine) error {
 	if job == nil {
 		return fmt.Errorf("nil audit job")
 	}
 
-	return job.Process(engine)
+	return job.Process(ctx, engine)
 }
 
 func (q *Queue) Close() {

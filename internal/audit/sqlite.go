@@ -32,11 +32,11 @@ type Finding struct {
 }
 
 type Store interface {
-	SaveJob(job Job) error
+	SaveAuditResult(ctx context.Context, job Job, jobID string, findings []Finding) error
 }
 
-func (s *SQLiteStore) SaveAuditResult(job Job, jobID string, findings []Finding) error {
-	tx, err := s.db.Begin()
+func (s *SQLiteStore) SaveAuditResult(ctx context.Context, job Job, jobID string, findings []Finding) error {
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -94,10 +94,11 @@ func (s *SQLiteStore) SaveAuditResult(job Job, jobID string, findings []Finding)
 
 		errStr = j.Error
 	default:
-		return fmt.Errorf("uknown job type: %T", job)
+		return fmt.Errorf("unknown job type: %T", job)
 	}
 
-	_, err = tx.Exec(
+	_, err = tx.ExecContext(
+		ctx,
 		query,
 		jobID,
 		jobType,
@@ -118,7 +119,7 @@ func (s *SQLiteStore) SaveAuditResult(job Job, jobID string, findings []Finding)
 		return err
 	}
 
-	stmt, err := tx.Prepare(`INSERT INTO findings (
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO findings (
 		id,
 		job_id,
 		rule_id,
@@ -132,7 +133,8 @@ func (s *SQLiteStore) SaveAuditResult(job Job, jobID string, findings []Finding)
 	defer stmt.Close()
 
 	for _, finding := range findings {
-		if _, err := stmt.Exec(
+		if _, err := stmt.ExecContext(
+			ctx,
 			finding.ID,
 			finding.JobID,
 			finding.RuleID,
