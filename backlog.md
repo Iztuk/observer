@@ -58,8 +58,8 @@
 
 - [ ] Implement basic auditing pipeline (no contracts yet)
 - [ ] Generate finding for upstream failures
-- [ ] Generate finding for unknown hosts
-- [ ] Generate basic “request observed” / “response observed” records
+- [ ] Generate finding for unknown timeouts
+- [ ] Persist findings linked to audit jobs
 
 ---
 

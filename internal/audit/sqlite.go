@@ -21,7 +21,7 @@ type SQLiteStore struct {
 
 var DatabaseStore SQLiteStore
 
-type Findings struct {
+type Finding struct {
 	ID        string
 	JobID     string
 	RuleID    string
@@ -34,7 +34,7 @@ type Store interface {
 	SaveJob(job Job) error
 }
 
-func (s *SQLiteStore) SaveJob(job Job) error {
+func (s *SQLiteStore) SaveJob(job Job, jobID string, findings []Finding) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
