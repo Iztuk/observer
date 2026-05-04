@@ -26,13 +26,15 @@ func main() {
 	// NOTE: Run the daemon in the background when the project is ready for deployment
 	case "init":
 		initCmd := flag.NewFlagSet("init", flag.ExitOnError)
-		force := initCmd.Bool("force", false, "Overwrite existing config file")
+		resetConfig := initCmd.Bool("reset-config", false, "Overwrite existing config file")
 		resetDB := initCmd.Bool("reset-db", false, "Delete and recreate the database")
 		_ = initCmd.Parse(os.Args[2:])
 
-		err := config.InitConfigDir(*force)
-		if err != nil {
-			log.Fatal(err)
+		if *resetConfig {
+			err := config.InitConfigDir(*resetConfig)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		configDir, err := config.ConfigDir()
@@ -41,17 +43,13 @@ func main() {
 		}
 
 		dbPath := configDir + "/cf-observer.db"
-		err = audit.InitDatabase(dbPath, *resetDB)
-		if err != nil {
-			log.Fatal(err)
+		if *resetDB {
+			err = audit.InitDatabase(dbPath, *resetDB)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
-		fmt.Printf(`Initialization complete.
-Config directory: %s
-Files Created:
-	config.yaml
-	cf-observer.db
-`, configDir)
 	case "start":
 		startCmd := flag.NewFlagSet("start", flag.ExitOnError)
 		configFile := startCmd.String("config", "", "path to config file")

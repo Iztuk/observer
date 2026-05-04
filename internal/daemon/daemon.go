@@ -32,6 +32,11 @@ func RunDaemon(hosts map[string]config.Host) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	err = audit.DatabaseStore.Connect(logger)
+	if err != nil {
+		return fmt.Errorf("connect to database: %w", err)
+	}
+
 	queue := audit.NewQueue(config.AppRunTimeConfig.AuditConfig.QueueSize)
 	wg := queue.StartWorkers(config.AppRunTimeConfig.AuditConfig.Workers, logger)
 

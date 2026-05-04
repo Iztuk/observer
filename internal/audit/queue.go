@@ -9,7 +9,7 @@ import (
 
 type Job interface {
 	JobType() JobType
-	Process()
+	Process() error
 }
 
 type Queue struct {
@@ -19,28 +19,28 @@ type Queue struct {
 	once sync.Once
 }
 
-func (r RequestJob) JobType() JobType {
+func (r *RequestJob) JobType() JobType {
 	return RequestJobType
 }
 
-func (r RequestJob) Process() {
-	fmt.Printf("\nProcessing Request Job: %v", r)
+func (r *RequestJob) Process() error {
+	return DatabaseStore.SaveJob(r)
 }
 
-func (r ResponseJob) JobType() JobType {
+func (r *ResponseJob) JobType() JobType {
 	return ResponseJobType
 }
 
-func (r ResponseJob) Process() {
-	fmt.Printf("\nProcessing Response Job: %v", r)
+func (r *ResponseJob) Process() error {
+	return DatabaseStore.SaveJob(r)
 }
 
-func (r FailureJob) JobType() JobType {
+func (r *FailureJob) JobType() JobType {
 	return FailureJobType
 }
 
-func (r FailureJob) Process() {
-	fmt.Printf("\nProcessing Failure Job: %v", r)
+func (r *FailureJob) Process() error {
+	return DatabaseStore.SaveJob(r)
 }
 
 func NewQueue(size int) *Queue {
@@ -109,8 +109,7 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("nil audit job")
 	}
 
-	job.Process()
-	return nil
+	return job.Process()
 }
 
 func (q *Queue) Close() {

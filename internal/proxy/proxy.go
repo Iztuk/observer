@@ -79,17 +79,20 @@ func NewProxyManager(hosts map[string]config.Host, queue *audit.Queue, logger *l
 
 				job := audit.NewRequestJob(pr.Out, h.Upstream.String(), start)
 
-				if pr.Out.Body != nil {
+				if pr.Out.Body != nil && pr.Out.Body != http.NoBody && pr.Out.ContentLength != 0 {
 					pr.Out.Body = audit.NewCapturingBody(pr.Out.Body, func(b []byte) {
 						job.Body = b
 
 						if !queue.TryEnqueue(job) {
 							logger.Printf("audit queue full; dropping request job")
+							return
 						}
+
 					})
 				} else {
 					if !queue.TryEnqueue(job) {
 						logger.Printf("audit queue full; dropping request job")
+						return
 					}
 				}
 
@@ -97,17 +100,20 @@ func NewProxyManager(hosts map[string]config.Host, queue *audit.Queue, logger *l
 			ModifyResponse: func(r *http.Response) error {
 				job := audit.NewResponseJob(r, h.Upstream.String())
 
-				if r.Body != nil {
+				if r.Body != nil && r.Body != http.NoBody && r.ContentLength != 0 {
 					r.Body = audit.NewCapturingBody(r.Body, func(b []byte) {
 						job.Body = b
 
 						if !queue.TryEnqueue(job) {
 							logger.Printf("audit queue full; dropping response job")
+							return
 						}
+
 					})
 				} else {
 					if !queue.TryEnqueue(job) {
 						logger.Printf("audit queue full; dropping response job")
+						return nil
 					}
 				}
 
