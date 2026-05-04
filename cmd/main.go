@@ -30,23 +30,42 @@ func main() {
 		resetDB := initCmd.Bool("reset-db", false, "Delete and recreate the database")
 		_ = initCmd.Parse(os.Args[2:])
 
-		if *resetConfig {
+		if !*resetConfig && !*resetDB {
 			err := config.InitConfigDir(*resetConfig)
 			if err != nil {
 				log.Fatal(err)
 			}
-		}
 
-		configDir, err := config.ConfigDir()
-		if err != nil {
-			log.Fatal(err)
-		}
+			configDir, err := config.ConfigDir()
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		dbPath := configDir + "/cf-observer.db"
-		if *resetDB {
+			dbPath := configDir + "/cf-observer.db"
 			err = audit.InitDatabase(dbPath, *resetDB)
 			if err != nil {
 				log.Fatal(err)
+			}
+
+		} else {
+			if *resetConfig {
+				err := config.InitConfigDir(*resetConfig)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+
+			configDir, err := config.ConfigDir()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			dbPath := configDir + "/cf-observer.db"
+			if *resetDB {
+				err = audit.InitDatabase(dbPath, *resetDB)
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 		}
 

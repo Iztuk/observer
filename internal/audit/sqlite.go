@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -127,7 +128,7 @@ func (s *SQLiteStore) Connect(logger *log.Logger) error {
 		return err
 	}
 
-	dbPath := configDir + "/cf-observer.db"
+	dbPath := filepath.Join(configDir, "cf-observer.db")
 
 	s.db, err = sql.Open("sqlite", dbPath)
 	if err != nil {

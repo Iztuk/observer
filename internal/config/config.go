@@ -84,7 +84,7 @@ func InitConfigDir(force bool) error {
 		return err
 	}
 
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("create config directory: %w", err)
 	}
 
@@ -100,7 +100,7 @@ func InitConfigDir(force bool) error {
 		}
 	}
 
-	if err := os.WriteFile(configPath, []byte(defaultConfigYAML), 0o644); err != nil {
+	if err := os.WriteFile(configPath, []byte(defaultConfigYAML), 0o600); err != nil {
 		return fmt.Errorf("write config file: %w", err)
 	}
 

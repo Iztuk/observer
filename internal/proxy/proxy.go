@@ -79,7 +79,7 @@ func NewProxyManager(hosts map[string]config.Host, queue *audit.Queue, logger *l
 
 				job := audit.NewRequestJob(pr.Out, h.Upstream.String(), start)
 
-				if pr.Out.Body != nil && pr.Out.Body != http.NoBody && pr.Out.ContentLength != 0 {
+				if pr.Out.Body != nil && pr.Out.Body != http.NoBody {
 					pr.Out.Body = audit.NewCapturingBody(pr.Out.Body, func(b []byte) {
 						job.Body = b
 
@@ -100,7 +100,7 @@ func NewProxyManager(hosts map[string]config.Host, queue *audit.Queue, logger *l
 			ModifyResponse: func(r *http.Response) error {
 				job := audit.NewResponseJob(r, h.Upstream.String())
 
-				if r.Body != nil && r.Body != http.NoBody && r.ContentLength != 0 {
+				if r.Body != nil && r.Body != http.NoBody {
 					r.Body = audit.NewCapturingBody(r.Body, func(b []byte) {
 						job.Body = b
 
