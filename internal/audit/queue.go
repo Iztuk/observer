@@ -5,11 +5,13 @@ import (
 	"log"
 	"runtime/debug"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 type Job interface {
 	JobType() JobType
-	Process() error
+	Process(e *RuleEngine) error
 }
 
 type Queue struct {
@@ -23,24 +25,57 @@ func (r *RequestJob) JobType() JobType {
 	return RequestJobType
 }
 
-func (r *RequestJob) Process() error {
-	return DatabaseStore.SaveJob(r)
+func (r *RequestJob) Process(engine *RuleEngine) error {
+	jobID := uuid.NewString()
+
+	findings, err := engine.Evaluate(r, jobID)
+	if err != nil {
+		return err
+	}
+
+	if len(findings) == 0 {
+		return nil
+	}
+
+	return DatabaseStore.SaveAuditResult(r, jobID, findings)
 }
 
 func (r *ResponseJob) JobType() JobType {
 	return ResponseJobType
 }
 
-func (r *ResponseJob) Process() error {
-	return DatabaseStore.SaveJob(r)
+func (r *ResponseJob) Process(engine *RuleEngine) error {
+	jobID := uuid.NewString()
+
+	findings, err := engine.Evaluate(r, jobID)
+	if err != nil {
+		return err
+	}
+
+	if len(findings) == 0 {
+		return nil
+	}
+
+	return DatabaseStore.SaveAuditResult(r, jobID, findings)
 }
 
 func (r *FailureJob) JobType() JobType {
 	return FailureJobType
 }
 
-func (r *FailureJob) Process() error {
-	return DatabaseStore.SaveJob(r)
+func (r *FailureJob) Process(engine *RuleEngine) error {
+	jobID := uuid.NewString()
+
+	findings, err := engine.Evaluate(r, jobID)
+	if err != nil {
+		return err
+	}
+
+	if len(findings) == 0 {
+		return nil
+	}
+
+	return DatabaseStore.SaveAuditResult(r, jobID, findings)
 }
 
 func NewQueue(size int) *Queue {
@@ -69,7 +104,7 @@ func (q *Queue) TryEnqueue(job Job) bool {
 	}
 }
 
-func (q *Queue) StartWorkers(count int, logger *log.Logger) *sync.WaitGroup {
+func (q *Queue) StartWorkers(count int, logger *log.Logger, engine *RuleEngine) *sync.WaitGroup {
 	var wg sync.WaitGroup
 
 	for i := 0; i < count; i++ {
@@ -91,7 +126,7 @@ func (q *Queue) StartWorkers(count int, logger *log.Logger) *sync.WaitGroup {
 						}
 					}()
 
-					if err := ProcessJob(job); err != nil {
+					if err := ProcessJob(job, engine); err != nil {
 						logger.Printf("audit worker %d failed to process job: %v", workerID, err)
 					}
 				}()
@@ -104,12 +139,12 @@ func (q *Queue) StartWorkers(count int, logger *log.Logger) *sync.WaitGroup {
 	return &wg
 }
 
-func ProcessJob(job Job) error {
+func ProcessJob(job Job, engine *RuleEngine) error {
 	if job == nil {
 		return fmt.Errorf("nil audit job")
 	}
 
-	return job.Process()
+	return job.Process(engine)
 }
 
 func (q *Queue) Close() {

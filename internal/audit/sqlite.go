@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -34,7 +35,7 @@ type Store interface {
 	SaveJob(job Job) error
 }
 
-func (s *SQLiteStore) SaveJob(job Job, jobID string, findings []Finding) error {
+func (s *SQLiteStore) SaveAuditResult(job Job, jobID string, findings []Finding) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
@@ -59,7 +60,6 @@ func (s *SQLiteStore) SaveJob(job Job, jobID string, findings []Finding) error {
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 
 	var (
-		id      string
 		jobType string
 		meta    Metadata
 		headers string
@@ -69,7 +69,6 @@ func (s *SQLiteStore) SaveJob(job Job, jobID string, findings []Finding) error {
 
 	switch j := job.(type) {
 	case *RequestJob:
-		id = newUUID()
 		jobType = string(j.JobType())
 		meta = j.Meta
 
@@ -80,7 +79,6 @@ func (s *SQLiteStore) SaveJob(job Job, jobID string, findings []Finding) error {
 
 		body = string(j.Body)
 	case *ResponseJob:
-		id = newUUID()
 		jobType = string(j.JobType())
 		meta = j.Meta
 
@@ -91,16 +89,17 @@ func (s *SQLiteStore) SaveJob(job Job, jobID string, findings []Finding) error {
 
 		body = string(j.Body)
 	case *FailureJob:
-		id = newUUID()
 		jobType = string(j.JobType())
 		meta = j.Meta
 
 		errStr = j.Error
+	default:
+		return fmt.Errorf("uknown job type: %T", job)
 	}
 
 	_, err = tx.Exec(
 		query,
-		id,
+		jobID,
 		jobType,
 		meta.RequestID,
 		meta.Host,
@@ -117,6 +116,32 @@ func (s *SQLiteStore) SaveJob(job Job, jobID string, findings []Finding) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	stmt, err := tx.Prepare(`INSERT INTO findings (
+		id,
+		job_id,
+		rule_id,
+		title,
+		message,
+		created_at
+		) VALUES (?, ?, ?, ?, ?, ?)`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, finding := range findings {
+		if _, err := stmt.Exec(
+			finding.ID,
+			finding.JobID,
+			finding.RuleID,
+			finding.Title,
+			finding.Message,
+			finding.CreatedAt.Format(time.RFC3339Nano),
+		); err != nil {
+			return err
+		}
 	}
 
 	return tx.Commit()

@@ -1,7 +1,6 @@
-package rules
+package audit
 
 import (
-	"cf-observer/internal/audit"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,28 +10,35 @@ type RuleID string
 
 const (
 	RuleProxyUpstreamFailure RuleID = "proxy.upstream_failure"
-	RuleProxyUpstreamTimeout RuleID = "proxy.upstream_host"
+	RuleProxyUpstreamTimeout RuleID = "proxy.upstream_timeout"
 )
 
 type Rule interface {
 	ID() RuleID
 	Title() string
-	AppliesTo() []audit.JobType
-	Check(job audit.Job, jobID string) ([]audit.Finding, error)
+	AppliesTo() []JobType
+	Check(job Job, jobID string) ([]Finding, error)
 }
 
 type RuleEngine struct {
 	rules []Rule
 }
 
-func NewRuleEngine(rules []Rule) *RuleEngine {
+func NewRuleEngine() *RuleEngine {
 	return &RuleEngine{
-		rules: rules,
+		rules: getRules(),
 	}
 }
 
-func (e *RuleEngine) Evaluate(job audit.Job, jobID string) ([]audit.Finding, error) {
-	var findings []audit.Finding
+func getRules() []Rule {
+	return []Rule{
+		UpstreamFailureRule{},
+		UpstreamTimeoutRule{},
+	}
+}
+
+func (e *RuleEngine) Evaluate(job Job, jobID string) ([]Finding, error) {
+	var findings []Finding
 
 	for _, rule := range e.rules {
 		if !ruleApplies(rule, job.JobType()) {
@@ -50,7 +56,7 @@ func (e *RuleEngine) Evaluate(job audit.Job, jobID string) ([]audit.Finding, err
 	return findings, nil
 }
 
-func ruleApplies(rule Rule, jobType audit.JobType) bool {
+func ruleApplies(rule Rule, jobType JobType) bool {
 	for _, supported := range rule.AppliesTo() {
 		if supported == jobType {
 			return true
@@ -70,12 +76,12 @@ func (r UpstreamFailureRule) Title() string {
 	return "Upstream request failed"
 }
 
-func (r UpstreamFailureRule) AppliesTo() []audit.JobType {
-	return []audit.JobType{audit.FailureJobType}
+func (r UpstreamFailureRule) AppliesTo() []JobType {
+	return []JobType{FailureJobType}
 }
 
-func (r UpstreamFailureRule) Check(job audit.Job, jobID string) ([]audit.Finding, error) {
-	failureJob, ok := job.(*audit.FailureJob)
+func (r UpstreamFailureRule) Check(job Job, jobID string) ([]Finding, error) {
+	failureJob, ok := job.(*FailureJob)
 	if !ok {
 		return nil, nil
 	}
@@ -84,7 +90,7 @@ func (r UpstreamFailureRule) Check(job audit.Job, jobID string) ([]audit.Finding
 		return nil, nil
 	}
 
-	return []audit.Finding{
+	return []Finding{
 		{
 			ID:        uuid.NewString(),
 			JobID:     jobID,
@@ -105,12 +111,12 @@ func (r UpstreamTimeoutRule) Title() string {
 	return "Upstream request timed out"
 }
 
-func (r UpstreamTimeoutRule) AppliesTo() []audit.JobType {
-	return []audit.JobType{audit.FailureJobType}
+func (r UpstreamTimeoutRule) AppliesTo() []JobType {
+	return []JobType{FailureJobType}
 }
 
-func (r UpstreamTimeoutRule) Check(job audit.Job, jobID string) ([]audit.Finding, error) {
-	failureJob, ok := job.(*audit.FailureJob)
+func (r UpstreamTimeoutRule) Check(job Job, jobID string) ([]Finding, error) {
+	failureJob, ok := job.(*FailureJob)
 	if !ok {
 		return nil, nil
 	}
@@ -119,7 +125,7 @@ func (r UpstreamTimeoutRule) Check(job audit.Job, jobID string) ([]audit.Finding
 		return nil, nil
 	}
 
-	return []audit.Finding{
+	return []Finding{
 		{
 			ID:        uuid.NewString(),
 			JobID:     jobID,

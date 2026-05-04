@@ -56,10 +56,10 @@
 
 ### Minimal Auditing (Skeleton)
 
-- [ ] Implement basic auditing pipeline (no contracts yet)
-- [ ] Generate finding for upstream failures
-- [ ] Generate finding for unknown timeouts
-- [ ] Persist findings linked to audit jobs
+- [x] Implement basic auditing pipeline (no contracts yet)
+- [x] Generate finding for upstream failures
+- [x] Generate finding for upstream timeouts
+- [x] Persist findings linked to audit jobs
 
 ---
 

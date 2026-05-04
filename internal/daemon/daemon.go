@@ -37,8 +37,10 @@ func RunDaemon(hosts map[string]config.Host) error {
 		return fmt.Errorf("connect to database: %w", err)
 	}
 
+	engine := audit.NewRuleEngine()
+
 	queue := audit.NewQueue(config.AppRunTimeConfig.AuditConfig.QueueSize)
-	wg := queue.StartWorkers(config.AppRunTimeConfig.AuditConfig.Workers, logger)
+	wg := queue.StartWorkers(config.AppRunTimeConfig.AuditConfig.Workers, logger, engine)
 
 	defer func() {
 		queue.Close()
