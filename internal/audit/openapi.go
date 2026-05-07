@@ -182,5 +182,50 @@ func LoadOpenAPIDocument(path string) (OpenAPIDoc, error) {
 		return OpenAPIDoc{}, fmt.Errorf("unsupported OpenAPI document type: %s", path)
 	}
 
+	return validateOpenAPIContractStructure(doc)
+}
+
+func validateOpenAPIContractStructure(doc OpenAPIDoc) (OpenAPIDoc, error) {
+	if strings.TrimSpace(doc.OpenAPI) == "" {
+		return OpenAPIDoc{}, fmt.Errorf("invalid OpenAPI contract: missing openapi field")
+	}
+
+	if strings.TrimSpace(doc.Info.Title) == "" {
+		return OpenAPIDoc{}, fmt.Errorf("invalid OpenAPI contract: missing info.title")
+	}
+
+	if strings.TrimSpace(doc.Info.Version) == "" {
+		return OpenAPIDoc{}, fmt.Errorf("invalid OpenAPI contract: missing info.version")
+	}
+
+	if len(doc.Paths) == 0 {
+		return OpenAPIDoc{}, fmt.Errorf("invalid OpenAPI contract: missing paths")
+	}
+
+	for path, pathItem := range doc.Paths {
+		if strings.TrimSpace(path) == "" {
+			return OpenAPIDoc{}, fmt.Errorf("invalid OpenAPI contract: empty path")
+		}
+
+		if !strings.HasPrefix(path, "/") {
+			return OpenAPIDoc{}, fmt.Errorf("invalid OpenAPI contract: path %q must start with '/'", path)
+		}
+
+		if !pathItem.HasOperation() {
+			return OpenAPIDoc{}, fmt.Errorf("invalid OpenAPI contract: path %q has no operations", path)
+		}
+	}
+
 	return doc, nil
+}
+
+func (p OpenAPIPathItem) HasOperation() bool {
+	return p.GET != nil ||
+		p.POST != nil ||
+		p.PUT != nil ||
+		p.PATCH != nil ||
+		p.DELETE != nil ||
+		p.HEAD != nil ||
+		p.OPTIONS != nil ||
+		p.TRACE != nil
 }
