@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -238,18 +239,48 @@ func (d OpenAPIDoc) FindOpenAPIOperation(method, path string) (*OpenAPIOperation
 		}
 	}
 
+	type candidate struct {
+		path string
+		item OpenAPIPathItem
+	}
+
+	candidates := make([]candidate, 0, len(d.Paths))
+
 	for contractPath, pathItem := range d.Paths {
 		if !matchOpenAPIPath(contractPath, path) {
 			continue
 		}
 
-		op := pathItem.OperationForMethod(method)
+		candidates = append(candidates, candidate{
+			path: contractPath,
+			item: pathItem,
+		})
+	}
+
+	sort.Slice(candidates, func(i, j int) bool {
+		return pathSpecificity(candidates[i].path) > pathSpecificity(candidates[j].path)
+	})
+
+	for _, c := range candidates {
+		op := c.item.OperationForMethod(method)
 		if op != nil {
 			return op, true
 		}
 	}
 
 	return nil, false
+}
+
+func pathSpecificity(path string) int {
+	score := 0
+
+	for _, segment := range splitPath(path) {
+		if !isPathParam(segment) {
+			score++
+		}
+	}
+
+	return score
 }
 
 func (p OpenAPIPathItem) OperationForMethod(method string) *OpenAPIOperation {

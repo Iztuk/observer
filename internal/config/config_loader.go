@@ -48,7 +48,12 @@ func LoadConfigFile(override string) (map[string]Host, error) {
 			continue
 		}
 
-		contract, err := audit.LoadOpenAPIDocument(host.APIContractPath)
+		contractPath := host.APIContractPath
+		if !filepath.IsAbs(contractPath) {
+			contractPath = filepath.Join(filepath.Dir(configPath), contractPath)
+		}
+
+		contract, err := audit.LoadOpenAPIDocument(contractPath)
 		if err != nil {
 			return map[string]Host{}, fmt.Errorf("load api contract for host %q: %w", key, err)
 		}
@@ -98,10 +103,10 @@ func (c *Config) ValidateHostUrls() (map[string]Host, error) {
 		}
 
 		c.Hosts[key] = Host{
-			UpstreamRaw:      host.UpstreamRaw,
-			Upstream:         u,
-			APIContract:      host.APIContract,
-			ResourceContract: host.ResourceContract,
+			UpstreamRaw: host.UpstreamRaw,
+			Upstream:    u,
+			APIContract: host.APIContract,
+			// ResourceContract: host.ResourceContract,
 		}
 	}
 
