@@ -77,12 +77,14 @@
 - [ ] Validate HTTP method is allowed
 - [ ] Validate content type
 - [ ] Validate request body presence/absence
+- [ ] Validate request body format based on contract media type
 - [ ] Validate JSON format for request body
 
 ### Response-Side API Auditing
 
 - [ ] Validate response status codes
 - [ ] Validate response content type
+- [ ] Validate respone body format based on contract media type
 - [ ] Validate JSON format for response body
 - [ ] Validate basic schema conformance
 
