@@ -1,6 +1,7 @@
 package config
 
 import (
+	"cf-observer/internal/audit"
 	"fmt"
 	"net/url"
 	"os"
@@ -28,20 +29,40 @@ func LoadConfigFile(override string) (map[string]Host, error) {
 		return map[string]Host{}, err
 	}
 
-	var config Config
-	err = yaml.Unmarshal(data, &config)
+	var cfg Config
+	err = yaml.Unmarshal(data, &cfg)
 	if err != nil {
 		return map[string]Host{}, err
 	}
 
-	err = config.Validate()
+	err = cfg.Validate()
 	if err != nil {
 		return map[string]Host{}, err
 	}
 
-	AppRunTimeConfig = config.RunTime
+	AppRunTimeConfig = cfg.RunTime
 
-	return config.ValidateHostUrls()
+	for key, host := range cfg.Hosts {
+		if host.APIContractPath == "" {
+			cfg.Hosts[key] = host
+			continue
+		}
+
+		contractPath := host.APIContractPath
+		if !filepath.IsAbs(contractPath) {
+			contractPath = filepath.Join(filepath.Dir(configPath), contractPath)
+		}
+
+		contract, err := audit.LoadOpenAPIDocument(contractPath)
+		if err != nil {
+			return map[string]Host{}, fmt.Errorf("load api contract for host %q: %w", key, err)
+		}
+
+		host.APIContract = contract
+		cfg.Hosts[key] = host
+	}
+
+	return cfg.ValidateHostUrls()
 }
 
 func (c *Config) Validate() error {
@@ -82,10 +103,10 @@ func (c *Config) ValidateHostUrls() (map[string]Host, error) {
 		}
 
 		c.Hosts[key] = Host{
-			UpstreamRaw:      host.UpstreamRaw,
-			Upstream:         u,
-			ApiContract:      host.ApiContract,
-			ResourceContract: host.ResourceContract,
+			UpstreamRaw: host.UpstreamRaw,
+			Upstream:    u,
+			APIContract: host.APIContract,
+			// ResourceContract: host.ResourceContract,
 		}
 	}
 

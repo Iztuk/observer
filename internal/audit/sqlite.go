@@ -1,7 +1,6 @@
 package audit
 
 import (
-	"cf-observer/internal/config"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -149,14 +148,10 @@ func (s *SQLiteStore) SaveAuditResult(ctx context.Context, job Job, jobID string
 	return tx.Commit()
 }
 
-func (s *SQLiteStore) Connect(logger *log.Logger) error {
-	configDir, err := config.ConfigDir()
-	if err != nil {
-		return err
-	}
-
+func (s *SQLiteStore) Connect(configDir string, logger *log.Logger) error {
 	dbPath := filepath.Join(configDir, "cf-observer.db")
 
+	var err error
 	s.db, err = sql.Open("sqlite", dbPath)
 	if err != nil {
 		return err

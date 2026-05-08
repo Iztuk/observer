@@ -1,6 +1,7 @@
 package config
 
 import (
+	"cf-observer/internal/audit"
 	"errors"
 	"fmt"
 	"net/url"
@@ -14,10 +15,11 @@ type Config struct {
 }
 
 type Host struct {
-	UpstreamRaw      string   `yaml:"upstream"`
-	Upstream         *url.URL `yaml:"-"`
-	ApiContract      string   `yaml:"api_contract"`
-	ResourceContract string   `yaml:"resource_contract"`
+	UpstreamRaw     string           `yaml:"upstream"`
+	Upstream        *url.URL         `yaml:"-"`
+	APIContractPath string           `yaml:"api_contract"`
+	APIContract     audit.OpenAPIDoc `yaml:"-"`
+	// ResourceContract string   `yaml:"resource_contract"`
 }
 
 type RunTimeConfig struct {

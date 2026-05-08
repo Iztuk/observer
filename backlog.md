@@ -67,9 +67,9 @@
 
 ### API Contract Integration
 
-- [ ] Load API contract files per host
-- [ ] Validate contract structure at startup
-- [ ] Map contracts to routes and methods
+- [x] Load API contract files per host
+- [x] Validate contract structure at startup
+- [x] Map contracts to routes and methods
 
 ### Request-Side API Auditing
 

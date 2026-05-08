@@ -32,7 +32,12 @@ func RunDaemon(hosts map[string]config.Host) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	err = audit.DatabaseStore.Connect(logger)
+	configDir, err := config.ConfigDir()
+	if err != nil {
+		return fmt.Errorf("failed to fetch config directory: %w", err)
+	}
+
+	err = audit.DatabaseStore.Connect(configDir, logger)
 	if err != nil {
 		return fmt.Errorf("connect to database: %w", err)
 	}
