@@ -241,7 +241,7 @@ func (r RequestBodyMissing) Check(ctx RuleContext, job Job, jobID string) ([]Fin
 		return nil, nil
 	}
 
-	if body.Required && len(requestJob.Body) == 0 {
+	if body != nil && body.Required && len(requestJob.Body) == 0 {
 		return []Finding{
 			{
 				ID:     uuid.NewString(),
@@ -259,4 +259,58 @@ func (r RequestBodyMissing) Check(ctx RuleContext, job Job, jobID string) ([]Fin
 	}
 
 	return nil, nil
+}
+
+type RequestBodyNotAllowed struct{}
+
+func (r RequestBodyNotAllowed) ID() RuleID {
+	return RuleRequestBodyNotAllowed
+}
+
+func (r RequestBodyNotAllowed) Title() string {
+	return "Request body not allowed"
+}
+
+func (r RequestBodyNotAllowed) AppliesTo() []JobType {
+	return []JobType{RequestJobType}
+}
+
+func (r RequestBodyNotAllowed) Check(ctx RuleContext, job Job, jobID string) ([]Finding, error) {
+	requestJob, ok := job.(*RequestJob)
+	if !ok {
+		return nil, nil
+	}
+
+	body, found := ctx.Contracts.FindBody(
+		requestJob.Meta.Host,
+		requestJob.Meta.Method,
+		requestJob.Meta.Path,
+	)
+
+	if !found {
+		return nil, nil
+	}
+
+	if body != nil {
+		return nil, nil
+	}
+
+	if len(requestJob.Body) == 0 {
+		return nil, nil
+	}
+
+	return []Finding{
+		{
+			ID:     uuid.NewString(),
+			JobID:  jobID,
+			RuleID: string(r.ID()),
+			Title:  r.Title(),
+			Message: fmt.Sprintf(
+				"Request body not allowed for %s %s according to the API contract, but the request body was not empty.",
+				requestJob.Meta.Method,
+				requestJob.Meta.Path,
+			),
+			CreatedAt: time.Now().UTC(),
+		},
+	}, nil
 }

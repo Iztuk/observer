@@ -100,23 +100,11 @@ const (
 	// This rule is evaluated against RequestJob values.
 	RuleRequestBodyNotAllowed RuleID = "request.body_not_allowed"
 
-	// RuleRequestInvalidJSON applies when the OpenAPI operation expects a JSON
-	// request body and the captured request body is not valid JSON.
-	//
-	// Example:
-	//   - request Content-Type: application/json
-	//   - body: {"email":
-	//
-	// This rule should only run when the resolved operation allows a JSON media
-	// type such as application/json or application/*+json.
-	//
-	// This rule is evaluated against RequestJob values.
-	RuleRequestInvalidJSON RuleID = "request.invalid_json"
-
 	// RuleRequestInvalidBodyFormat applies when the request body does not match the
 	// expected non-JSON media format declared by the OpenAPI contract.
 	//
 	// Example future uses:
+	//	 - application/json body cannot be parsed as JSON
 	//   - multipart/form-data body cannot be parsed as multipart data
 	//   - application/xml body cannot be parsed as XML
 	//   - text/csv body cannot be parsed as CSV
@@ -267,6 +255,7 @@ func getRules() []Rule {
 		RequestMethodNotAllowedRule{},
 		RequestContentTypeNotAllowed{},
 		RequestBodyMissing{},
+		RequestBodyNotAllowed{},
 	}
 }
 
