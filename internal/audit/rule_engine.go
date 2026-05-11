@@ -256,6 +256,7 @@ func getRules() []Rule {
 		RequestContentTypeNotAllowed{},
 		RequestBodyMissing{},
 		RequestBodyNotAllowed{},
+		RequestInvalidBodyFormat{},
 	}
 }
 

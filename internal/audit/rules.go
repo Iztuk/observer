@@ -1,7 +1,15 @@
 package audit
 
 import (
+	"bytes"
+	"encoding/json"
+	"encoding/xml"
 	"fmt"
+	"io"
+	"mime"
+	"mime/multipart"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -313,4 +321,182 @@ func (r RequestBodyNotAllowed) Check(ctx RuleContext, job Job, jobID string) ([]
 			CreatedAt: time.Now().UTC(),
 		},
 	}, nil
+}
+
+type RequestInvalidBodyFormat struct{}
+
+func (r RequestInvalidBodyFormat) ID() RuleID {
+	return RuleRequestInvalidBodyFormat
+}
+
+func (r RequestInvalidBodyFormat) Title() string {
+	return "Request body format not allowed"
+}
+
+func (r RequestInvalidBodyFormat) AppliesTo() []JobType {
+	return []JobType{RequestJobType}
+}
+
+func (r RequestInvalidBodyFormat) Check(ctx RuleContext, job Job, jobID string) ([]Finding, error) {
+	requestJob, ok := job.(*RequestJob)
+	if !ok {
+		return nil, nil
+	}
+
+	body, found := ctx.Contracts.FindBody(
+		requestJob.Meta.Host,
+		requestJob.Meta.Method,
+		requestJob.Meta.Path,
+	)
+
+	if !found {
+		return nil, nil
+	}
+
+	if body == nil {
+		return nil, nil
+	}
+
+	if len(requestJob.Body) == 0 {
+		return nil, nil
+	}
+
+	contentType := requestJob.Headers.Get("Content-Type")
+	if contentType == "" {
+		return nil, nil
+	}
+
+	ct, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return []Finding{
+			{
+				ID:     uuid.NewString(),
+				JobID:  jobID,
+				RuleID: string(r.ID()),
+				Title:  r.Title(),
+				Message: fmt.Sprintf(
+					"Request Content-Type header %q could not be parsed for %s %s.",
+					contentType,
+					requestJob.Meta.Method,
+					requestJob.Meta.Path,
+				),
+				CreatedAt: time.Now().UTC(),
+			},
+		}, nil
+	}
+
+	ct = strings.ToLower(ct)
+
+	if !mediaTypeAllowed(body.Content, ct) {
+		return nil, nil
+	}
+
+	if err := validateBodyForMediaType(ct, params, requestJob.Body); err != nil {
+		return []Finding{
+			{
+				ID:     uuid.NewString(),
+				JobID:  jobID,
+				RuleID: string(r.ID()),
+				Title:  r.Title(),
+				Message: fmt.Sprintf(
+					"Request body is not valid for Content-Type %q on %s %s: %v.",
+					ct,
+					requestJob.Meta.Method,
+					requestJob.Meta.Path,
+					err,
+				),
+				CreatedAt: time.Now().UTC(),
+			},
+		}, nil
+	}
+
+	return nil, nil
+}
+
+func mediaTypeAllowed(content map[string]OpenAPIMediaType, ct string) bool {
+	for allowed := range content {
+		allowed = strings.ToLower(allowed)
+
+		if allowed == ct {
+			return true
+		}
+	}
+
+	return false
+}
+
+func validateBodyForMediaType(ct string, params map[string]string, body []byte) error {
+	switch {
+	case isJSONMediaType(ct):
+		if !json.Valid(body) {
+			return fmt.Errorf("body is not valid JSON")
+		}
+
+	case ct == "application/x-www-form-urlencoded":
+		if _, err := url.ParseQuery(string(body)); err != nil {
+			return fmt.Errorf("body is not valid form-urlencoded data: %w", err)
+		}
+
+	case isXMLMediaType(ct):
+		if err := validateXML(body); err != nil {
+			return fmt.Errorf("body is not valid XML: %w", err)
+		}
+
+	case ct == "multipart/form-data":
+		boundary := params["boundary"]
+		if boundary == "" {
+			return fmt.Errorf("multipart/form-data is missing boundary parameter")
+		}
+
+		if err := validateMultipart(body, boundary); err != nil {
+			return fmt.Errorf("body is not valid multipart/form-data: %w", err)
+		}
+
+	default:
+		return nil
+	}
+
+	return nil
+}
+
+func isJSONMediaType(ct string) bool {
+	return ct == "application/json" || strings.HasSuffix(ct, "+json")
+}
+
+func isXMLMediaType(ct string) bool {
+	return ct == "application/xml" ||
+		ct == "text/xml" ||
+		strings.HasSuffix(ct, "+xml")
+}
+
+func validateXML(body []byte) error {
+	decoder := xml.NewDecoder(bytes.NewReader(body))
+
+	for {
+		_, err := decoder.Token()
+		if err == io.EOF {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+}
+
+func validateMultipart(body []byte, boundary string) error {
+	reader := multipart.NewReader(bytes.NewReader(body), boundary)
+
+	const maxMemory = 10 << 20 // 10 MB
+
+	form, err := reader.ReadForm(maxMemory)
+	if err != nil {
+		return err
+	}
+
+	if form != nil {
+		_ = form.RemoveAll()
+	}
+
+	return nil
 }

@@ -77,7 +77,7 @@
 - [x] Validate HTTP method is allowed
 - [x] Validate content type
 - [x] Validate request body presence/absence
-- [ ] Validate request body format based on contract media type
+- [x] Validate request body format based on contract media type
 - [ ] Validate basic schema conformance
 
 ### Response-Side API Auditing
