@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -474,7 +475,7 @@ func validateXML(body []byte) error {
 
 	for {
 		_, err := decoder.Token()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 

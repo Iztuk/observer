@@ -78,13 +78,13 @@
 - [x] Validate content type
 - [x] Validate request body presence/absence
 - [x] Validate request body format based on contract media type
-- [ ] Validate basic schema conformance (JSON)
+- [x] Validate basic schema conformance (JSON)
 
 ### Response-Side API Auditing
 
 - [ ] Validate response status codes
 - [ ] Validate response content type
-- [ ] Validate respone body format based on contract media type
+- [ ] Validate response body format based on contract media type
 - [ ] Validate basic schema conformance (JSON)
 
 ### Resource Contract Integration
