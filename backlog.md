@@ -73,18 +73,19 @@
 
 ### Request-Side API Auditing
 
-- [ ] Validate request path exists in contract
-- [ ] Validate HTTP method is allowed
-- [ ] Validate content type
-- [ ] Validate request body presence/absence
-- [ ] Validate JSON format for request body
+- [x] Validate request path exists in contract
+- [x] Validate HTTP method is allowed
+- [x] Validate content type
+- [x] Validate request body presence/absence
+- [x] Validate request body format based on contract media type
+- [x] Validate basic schema conformance (JSON)
 
 ### Response-Side API Auditing
 
 - [ ] Validate response status codes
 - [ ] Validate response content type
-- [ ] Validate JSON format for response body
-- [ ] Validate basic schema conformance
+- [ ] Validate response body format based on contract media type
+- [ ] Validate basic schema conformance (JSON)
 
 ### Resource Contract Integration
 

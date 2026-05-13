@@ -42,7 +42,12 @@ func RunDaemon(hosts map[string]config.Host) error {
 		return fmt.Errorf("connect to database: %w", err)
 	}
 
-	engine := audit.NewRuleEngine()
+	contractRegistry, err := audit.NewContractRegistry(hosts)
+	if err != nil {
+		return fmt.Errorf("failed to initialize contract registry: %w", err)
+	}
+
+	engine := audit.NewRuleEngine(contractRegistry)
 
 	queue := audit.NewQueue(config.AppRunTimeConfig.AuditConfig.QueueSize)
 	wg := queue.StartWorkers(ctx, config.AppRunTimeConfig.AuditConfig.Workers, logger, engine)

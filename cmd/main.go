@@ -71,10 +71,9 @@ func main() {
 
 	case "start":
 		startCmd := flag.NewFlagSet("start", flag.ExitOnError)
-		configFile := startCmd.String("config", "", "path to config file")
 		_ = startCmd.Parse(os.Args[2:])
 
-		hosts, err := config.LoadConfigFile(*configFile)
+		hosts, err := config.LoadConfigFile()
 		if err != nil {
 			log.Fatal(err)
 		}

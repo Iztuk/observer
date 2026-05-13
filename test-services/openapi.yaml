@@ -1,0 +1,278 @@
+openapi: 3.0.3
+info:
+  title: Observer Test Service
+  version: 1.0.0
+  description: Simple service for testing CodeForge Observer request, response, timeout, and upstream failure behavior.
+
+servers:
+  - url: http://localhost:8081
+    description: Local test upstream
+
+paths:
+  /health:
+    get:
+      operationId: GetHealth
+      summary: Health check
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /users:
+    get:
+      operationId: ListUsers
+      summary: List users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+    post:
+      operationId: CreateUser
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /profiles:
+    get:
+      operationId: ListProfiles
+      summary: List profiles
+      responses:
+        "200":
+          description: List of profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Profile"
+
+    post:
+      operationId: CreateProfile
+      summary: Create profile with nested values
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProfileRequest"
+      responses:
+        "201":
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}:
+    get:
+      operationId: GetUser
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /timeout:
+    get:
+      operationId: TimeoutTest
+      summary: Endpoint intentionally slower than the proxy timeout
+      responses:
+        "200":
+          description: Slow response completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /reset:
+    get:
+      operationId: ResetConnectionTest
+      summary: Endpoint that closes the connection without sending a response
+      responses:
+        "502":
+          description: Proxy may convert upstream connection reset into a bad gateway response
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: ok
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - displayName
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        displayName:
+          type: string
+
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - displayName
+      properties:
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+
+    Profile:
+      type: object
+      required:
+        - id
+        - userId
+        - contact
+        - preferences
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        contact:
+          $ref: "#/components/schemas/ContactInfo"
+        preferences:
+          $ref: "#/components/schemas/UserPreferences"
+
+    CreateProfileRequest:
+      type: object
+      required:
+        - userId
+        - contact
+        - preferences
+      properties:
+        userId:
+          type: string
+        contact:
+          $ref: "#/components/schemas/ContactInfo"
+        preferences:
+          $ref: "#/components/schemas/UserPreferences"
+
+    ContactInfo:
+      type: object
+      required:
+        - email
+        - address
+      properties:
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          $ref: "#/components/schemas/Address"
+
+    Address:
+      type: object
+      required:
+        - city
+        - state
+        - zipCode
+      properties:
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+
+    UserPreferences:
+      type: object
+      required:
+        - theme
+        - notifications
+      properties:
+        theme:
+          type: string
+        notifications:
+          $ref: "#/components/schemas/NotificationPreferences"
+
+    NotificationPreferences:
+      type: object
+      required:
+        - email
+        - sms
+      properties:
+        email:
+          type: boolean
+        sms:
+          type: boolean
+
+    MessageResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string

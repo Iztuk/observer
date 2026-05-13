@@ -359,3 +359,24 @@ func splitPath(path string) []string {
 func isPathParam(segment string) bool {
 	return strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") && len(segment) > 2
 }
+
+func (d OpenAPIDoc) ResolveSchemaRef(ref string) (*OpenAPISchema, bool) {
+	const prefix = "#/components/schemas/"
+
+	if !strings.HasPrefix(ref, prefix) {
+		return nil, false
+	}
+
+	if d.Components == nil {
+		return nil, false
+	}
+
+	name := strings.TrimPrefix(ref, prefix)
+
+	schema, ok := d.Components.Schemas[name]
+	if !ok {
+		return nil, false
+	}
+
+	return &schema, true
+}
