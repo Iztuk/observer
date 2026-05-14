@@ -164,6 +164,15 @@ type ContractRegistry struct {
 	contracts map[string]OpenAPIDoc
 }
 
+func (r *ContractRegistry) HasContract(host string) bool {
+	if r == nil {
+		return false
+	}
+
+	_, ok := r.contracts[strings.ToLower(host)]
+	return ok
+}
+
 func (r *ContractRegistry) FindOperation(host, method, path string) (*OpenAPIOperation, bool) {
 	doc, ok := r.contracts[strings.ToLower(host)]
 	if !ok {
@@ -290,7 +299,18 @@ func getRules() []Rule {
 	}
 }
 
+// TODO: Update this to allow for custom rules to still apply even if there is no OpenAPI contract (ex. Rule for checking request query for possible SQL injection)
 func (e *RuleEngine) Evaluate(job Job, jobID string) ([]Finding, error) {
+	if e == nil || e.registry == nil {
+		return nil, nil
+	}
+
+	meta := job.Metadata()
+
+	if !e.registry.HasContract(meta.Host) {
+		return nil, nil
+	}
+
 	var findings []Finding
 
 	ctx := RuleContext{

@@ -12,6 +12,7 @@ import (
 
 type Job interface {
 	JobType() JobType
+	Metadata() Metadata
 	Process(c context.Context, e *RuleEngine) error
 }
 
@@ -24,6 +25,10 @@ type Queue struct {
 
 func (r *RequestJob) JobType() JobType {
 	return RequestJobType
+}
+
+func (r *RequestJob) Metadata() Metadata {
+	return r.Meta
 }
 
 func (r *RequestJob) Process(ctx context.Context, engine *RuleEngine) error {
@@ -45,6 +50,10 @@ func (r *ResponseJob) JobType() JobType {
 	return ResponseJobType
 }
 
+func (r *ResponseJob) Metadata() Metadata {
+	return r.Meta
+}
+
 func (r *ResponseJob) Process(ctx context.Context, engine *RuleEngine) error {
 	jobID := uuid.NewString()
 
@@ -62,6 +71,10 @@ func (r *ResponseJob) Process(ctx context.Context, engine *RuleEngine) error {
 
 func (r *FailureJob) JobType() JobType {
 	return FailureJobType
+}
+
+func (r *FailureJob) Metadata() Metadata {
+	return r.Meta
 }
 
 func (r *FailureJob) Process(ctx context.Context, engine *RuleEngine) error {
