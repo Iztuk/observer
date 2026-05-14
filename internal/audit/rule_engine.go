@@ -306,7 +306,7 @@ func (r *ContractRegistry) FindMethod(host, method, path string) (*OpenAPIOperat
 	return op, true
 }
 
-func (r *ContractRegistry) FindContentType(host, method, path, contentType string) (mt OpenAPIMediaType, applies, found bool) {
+func (r *ContractRegistry) FindRequestContentType(host, method, path, contentType string) (mt OpenAPIMediaType, applies, found bool) {
 	pathItem, ok := r.FindPathItem(host, path)
 	if !ok {
 		return OpenAPIMediaType{}, false, false
@@ -317,12 +317,54 @@ func (r *ContractRegistry) FindContentType(host, method, path, contentType strin
 		return OpenAPIMediaType{}, false, false
 	}
 
+	contentType = normalizeMediaType(contentType)
+
 	mediaType, ok := op.RequestBody.Content[contentType]
 	if !ok {
 		return OpenAPIMediaType{}, true, false
 	}
 
 	return mediaType, true, true
+}
+
+func (r *ContractRegistry) FindResponseContentType(host, method, path, status, contentType string) (mt OpenAPIMediaType, applies, found bool) {
+	pathItem, ok := r.FindPathItem(host, path)
+	if !ok {
+		return OpenAPIMediaType{}, false, false
+	}
+
+	op := pathItem.OperationForMethod(method)
+	if op == nil {
+		return OpenAPIMediaType{}, false, false
+	}
+
+	res, ok := op.Responses[status]
+	if !ok {
+		return OpenAPIMediaType{}, false, false
+	}
+
+	if len(res.Content) == 0 {
+		return OpenAPIMediaType{}, false, false
+	}
+
+	contentType = normalizeMediaType(contentType)
+
+	mediaType, ok := res.Content[contentType]
+	if !ok {
+		return OpenAPIMediaType{}, true, false
+	}
+
+	return mediaType, true, true
+}
+
+func normalizeMediaType(contentType string) string {
+	contentType = strings.ToLower(strings.TrimSpace(contentType))
+
+	if i := strings.Index(contentType, ";"); i >= 0 {
+		contentType = strings.TrimSpace(contentType[:i])
+	}
+
+	return contentType
 }
 
 func (r *ContractRegistry) FindBody(host, method, path string) (*OpenAPIRequestBody, bool) {
@@ -388,6 +430,7 @@ func getRules() []Rule {
 		RequestInvalidBodyFormat{},
 		RequestBodySchemaInvalid{},
 		ResponseStatusCodeRule{},
+		ResponseContentTypeNotAllowed{},
 	}
 }
 

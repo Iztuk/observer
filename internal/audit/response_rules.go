@@ -59,3 +59,55 @@ func (r ResponseStatusCodeRule) Check(ctx RuleContext, job Job, jobID string) ([
 		},
 	}, nil
 }
+
+type ResponseContentTypeNotAllowed struct{}
+
+func (r ResponseContentTypeNotAllowed) ID() RuleID {
+	return RuleResponseContentTypeNotAllowed
+}
+
+func (r ResponseContentTypeNotAllowed) Title() string {
+	return "Response content type not allowed"
+}
+
+func (r ResponseContentTypeNotAllowed) AppliesTo() []JobType {
+	return []JobType{ResponseJobType}
+}
+
+func (r ResponseContentTypeNotAllowed) Check(ctx RuleContext, job Job, jobID string) ([]Finding, error) {
+	responseJob, ok := job.(*ResponseJob)
+	if !ok {
+		return nil, nil
+	}
+
+	ct := responseJob.Headers.Get("Content-Type")
+	status := strconv.Itoa(responseJob.Meta.Status)
+
+	_, applies, found := ctx.Contracts.FindResponseContentType(
+		responseJob.Meta.Host,
+		responseJob.Meta.Method,
+		responseJob.Meta.Path,
+		status,
+		ct,
+	)
+
+	if (applies && found) || !applies {
+		return nil, nil
+	}
+
+	return []Finding{
+		{
+			ID:     uuid.NewString(),
+			JobID:  jobID,
+			RuleID: string(r.ID()),
+			Title:  r.Title(),
+			Message: fmt.Sprintf(
+				"Response content type %q is not allowed for %s %s according to the API contract.",
+				responseJob.Headers.Get("Content-Type"),
+				responseJob.Meta.Method,
+				responseJob.Meta.Path,
+			),
+			CreatedAt: time.Now().UTC(),
+		},
+	}, nil
+}

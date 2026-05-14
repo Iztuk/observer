@@ -192,7 +192,7 @@ func (r RequestContentTypeNotAllowed) Check(ctx RuleContext, job Job, jobID stri
 
 	contentType := requestJob.Headers.Get("Content-Type")
 
-	_, applies, found := ctx.Contracts.FindContentType(
+	_, applies, found := ctx.Contracts.FindRequestContentType(
 		requestJob.Meta.Host,
 		requestJob.Meta.Method,
 		requestJob.Meta.Path,
