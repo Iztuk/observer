@@ -111,3 +111,59 @@ func (r ResponseContentTypeNotAllowed) Check(ctx RuleContext, job Job, jobID str
 		},
 	}, nil
 }
+
+type ResponseBodyMissing struct{}
+
+func (r ResponseBodyMissing) ID() RuleID {
+	return RuleResponseBodyMissing
+}
+
+func (r ResponseBodyMissing) Title() string {
+	return "Response body missing"
+}
+
+func (r ResponseBodyMissing) AppliesTo() []JobType {
+	return []JobType{ResponseJobType}
+}
+
+func (r ResponseBodyMissing) Check(ctx RuleContext, job Job, jobID string) ([]Finding, error) {
+	responseJob, ok := job.(*ResponseJob)
+	if !ok {
+		return nil, nil
+	}
+
+	status := strconv.Itoa(responseJob.Meta.Status)
+	body, found := ctx.Contracts.FindResponseBody(
+		responseJob.Meta.Host,
+		responseJob.Meta.Method,
+		responseJob.Meta.Path,
+		status,
+	)
+
+	if !found {
+		return nil, nil
+	}
+
+	if len(body.Content) == 0 {
+		return nil, nil
+	}
+
+	if len(responseJob.Body) == 0 {
+		return []Finding{
+			{
+				ID:     uuid.NewString(),
+				JobID:  jobID,
+				RuleID: string(r.ID()),
+				Title:  r.Title(),
+				Message: fmt.Sprintf(
+					"Response body is required for %s %s according to the API contract, but the request body was empty.",
+					responseJob.Meta.Method,
+					responseJob.Meta.Path,
+				),
+				CreatedAt: time.Now().UTC(),
+			},
+		}, nil
+	}
+
+	return nil, nil
+}

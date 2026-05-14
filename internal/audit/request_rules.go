@@ -240,7 +240,7 @@ func (r RequestBodyMissing) Check(ctx RuleContext, job Job, jobID string) ([]Fin
 		return nil, nil
 	}
 
-	body, found := ctx.Contracts.FindBody(
+	body, found := ctx.Contracts.FindRequestBody(
 		requestJob.Meta.Host,
 		requestJob.Meta.Method,
 		requestJob.Meta.Path,
@@ -290,7 +290,7 @@ func (r RequestBodyNotAllowed) Check(ctx RuleContext, job Job, jobID string) ([]
 		return nil, nil
 	}
 
-	body, found := ctx.Contracts.FindBody(
+	body, found := ctx.Contracts.FindRequestBody(
 		requestJob.Meta.Host,
 		requestJob.Meta.Method,
 		requestJob.Meta.Path,
@@ -344,7 +344,7 @@ func (r RequestInvalidBodyFormat) Check(ctx RuleContext, job Job, jobID string) 
 		return nil, nil
 	}
 
-	body, found := ctx.Contracts.FindBody(
+	body, found := ctx.Contracts.FindRequestBody(
 		requestJob.Meta.Host,
 		requestJob.Meta.Method,
 		requestJob.Meta.Path,
@@ -522,7 +522,7 @@ func (r RequestBodySchemaInvalid) Check(ctx RuleContext, job Job, jobID string) 
 		return nil, nil
 	}
 
-	body, found := ctx.Contracts.FindBody(
+	body, found := ctx.Contracts.FindRequestBody(
 		requestJob.Meta.Host,
 		requestJob.Meta.Method,
 		requestJob.Meta.Path,

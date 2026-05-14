@@ -367,13 +367,27 @@ func normalizeMediaType(contentType string) string {
 	return contentType
 }
 
-func (r *ContractRegistry) FindBody(host, method, path string) (*OpenAPIRequestBody, bool) {
+func (r *ContractRegistry) FindRequestBody(host, method, path string) (*OpenAPIRequestBody, bool) {
 	op, ok := r.FindOperation(host, method, path)
 	if !ok {
 		return nil, false
 	}
 
 	return op.RequestBody, true
+}
+
+func (r *ContractRegistry) FindResponseBody(host, method, path, status string) (*OpenAPIResponse, bool) {
+	op, ok := r.FindOperation(host, method, path)
+	if !ok {
+		return nil, false
+	}
+
+	res, ok := op.Responses[status]
+	if !ok {
+		return nil, false
+	}
+
+	return &res, true
 }
 
 func (r *ContractRegistry) ResolveSchemaRef(host, ref string) (*OpenAPISchema, bool) {
@@ -431,6 +445,7 @@ func getRules() []Rule {
 		RequestBodySchemaInvalid{},
 		ResponseStatusCodeRule{},
 		ResponseContentTypeNotAllowed{},
+		ResponseBodyMissing{},
 	}
 }
 

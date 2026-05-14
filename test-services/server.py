@@ -31,6 +31,12 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             return None, {"error": "invalid json"}
 
+    def _send_empty_json(self, status_code):
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_GET(self):
         path = urlparse(self.path).path
 
