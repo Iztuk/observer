@@ -159,7 +159,7 @@ func (r ResponseBodyMissing) Check(ctx RuleContext, job Job, jobID string) ([]Fi
 				RuleID: string(r.ID()),
 				Title:  r.Title(),
 				Message: fmt.Sprintf(
-					"Response body is required for %s %s according to the API contract, but the request body was empty.",
+					"Response body is required for %s %s according to the API contract, but the response body was empty.",
 					responseJob.Meta.Method,
 					responseJob.Meta.Path,
 				),
@@ -174,7 +174,7 @@ func (r ResponseBodyMissing) Check(ctx RuleContext, job Job, jobID string) ([]Fi
 type ResponseBodyNotAllowed struct{}
 
 func (r ResponseBodyNotAllowed) ID() RuleID {
-	return RuleRequestBodyNotAllowed
+	return RuleResponseBodyNotAllowed
 }
 
 func (r ResponseBodyNotAllowed) Title() string {

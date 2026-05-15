@@ -340,7 +340,10 @@ func (r *ContractRegistry) FindResponseContentType(host, method, path, status, c
 
 	res, ok := op.Responses[status]
 	if !ok {
-		return OpenAPIMediaType{}, false, false
+		res, ok = op.Responses["default"]
+		if !ok {
+			return OpenAPIMediaType{}, false, false
+		}
 	}
 
 	if len(res.Content) == 0 {
@@ -384,7 +387,10 @@ func (r *ContractRegistry) FindResponseBody(host, method, path, status string) (
 
 	res, ok := op.Responses[status]
 	if !ok {
-		return nil, false
+		res, ok = op.Responses["default"]
+		if !ok {
+			return nil, false
+		}
 	}
 
 	return &res, true
