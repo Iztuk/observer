@@ -446,6 +446,7 @@ func getRules() []Rule {
 		ResponseStatusCodeRule{},
 		ResponseContentTypeNotAllowed{},
 		ResponseBodyMissing{},
+		ResponseBodyNotAllowed{},
 	}
 }
 
