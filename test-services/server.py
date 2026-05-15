@@ -31,11 +31,35 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             return None, {"error": "invalid json"}
 
+    def _send_empty_json(self, status_code):
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def _send_body_not_allowed_test(self, status_code):
+        body = json.dumps({"deleted": True}).encode("utf-8")
+
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_invalid_json(self, status_code):
+        body = b'{status: ok}'
+
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         path = urlparse(self.path).path
 
         if path == "/health":
-            self._send_json(200, {"status": "ok"})
+            self._send_json(200, {})
             return
 
         if path == "/users":
@@ -102,6 +126,27 @@ class Handler(BaseHTTPRequestHandler):
 
             PROFILES.append(profile)
             self._send_json(201, profile)
+            return
+
+        self._send_json(404, {"error": "route not found"})
+
+    def do_DELETE(self):
+        path = urlparse(self.path).path
+
+        if path.startswith("/users/"):
+            user_id = path.removeprefix("/users/")
+
+            for user in USERS:
+                if user["id"] == user_id:
+                    USERS.remove(user)
+
+                    # Intentionally wrong for testing:
+                    # OpenAPI says 204 has no response content,
+                    # but this sends a JSON body.
+                    self._send_body_not_allowed_test(204)
+                    return
+
+            self._send_json(404, {"error": "user not found"})
             return
 
         self._send_json(404, {"error": "route not found"})

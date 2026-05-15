@@ -95,30 +95,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /users/{id}:
-    get:
-      operationId: GetUser
-      summary: Get user by ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: User found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-        "404":
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+    /users/{id}:
+      get:
+        operationId: GetUser
+        summary: Get user by ID
+        parameters:
+          - name: id
+            in: path
+            required: true
+            schema:
+              type: string
+        responses:
+          "200":
+            description: User found
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/User"
+          "404":
+            description: User not found
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/ErrorResponse"
 
+      delete:
+        operationId: DeleteUser
+        summary: Delete user by ID
+        parameters:
+          - name: id
+            in: path
+            required: true
+            schema:
+              type: string
+        responses:
+          "204":
+            description: User deleted
   /timeout:
     get:
       operationId: TimeoutTest

@@ -135,6 +135,97 @@ const (
 	//
 	// This rule is evaluated against RequestJob values.
 	RuleRequestBodySchemaInvalid RuleID = "request.body_schema_invalid"
+
+	// RuleResponseStatusCodeNotDefined applies when the upstream response status
+	// code is not defined in the OpenAPI operation's responses map.
+	//
+	// Example:
+	//   - response status: 500
+	//   - contract responses: 200, 400, 404
+	//
+	// This rule should run after the request path and method have been resolved to
+	// an OpenAPI operation because response validation depends on the selected
+	// operation definition.
+	//
+	// This rule is evaluated against ResponseJob values.
+	RuleResponseStatusCodeNotDefined RuleID = "response.status_code_not_defined"
+
+	// RuleResponseContentTypeNotAllowed applies when the upstream response includes
+	// a body and the Content-Type header does not match any media type allowed by
+	// the OpenAPI response definition for the returned status code.
+	//
+	// Example:
+	//   - response Content-Type: text/plain
+	//   - contract allows: application/json
+	//
+	// This validates the declared media type only. It does not prove the body is
+	// actually valid JSON, XML, multipart data, etc.
+	//
+	// This rule is evaluated against ResponseJob values.
+	RuleResponseContentTypeNotAllowed RuleID = "response.content_type_not_allowed"
+
+	// RuleResponseBodyMissing applies when the OpenAPI response definition declares
+	// response content for the returned status code, but the captured response body
+	// is empty.
+	//
+	// Example:
+	//   - contract: 200 response defines application/json content
+	//   - response: 200 OK with no body
+	//
+	// This rule should run after the response status code has been matched to an
+	// OpenAPI response definition.
+	//
+	// This rule is evaluated against ResponseJob values.
+	RuleResponseBodyMissing RuleID = "response.body_missing"
+
+	// RuleResponseBodyNotAllowed applies when the OpenAPI response definition does
+	// not declare response content for the returned status code, but the upstream
+	// response includes a body.
+	//
+	// Example:
+	//   - contract: 204 response has no content
+	//   - response: 204 No Content with a JSON body
+	//
+	// This catches upstream services returning payloads for responses that are
+	// expected to be bodyless.
+	//
+	// This rule is evaluated against ResponseJob values.
+	RuleResponseBodyNotAllowed RuleID = "response.body_not_allowed"
+
+	// RuleResponseInvalidBodyFormat applies when the response body does not match
+	// the expected non-JSON media format declared by the OpenAPI contract.
+	//
+	// Example future uses:
+	//   - application/json body cannot be parsed as JSON
+	//   - application/xml body cannot be parsed as XML
+	//   - text/csv body cannot be parsed as CSV
+	//
+	// This is a generic extension point for media-type-specific validators beyond
+	// JSON. It should run only after content type validation determines which media
+	// type applies.
+	//
+	// This rule is evaluated against ResponseJob values.
+	RuleResponseInvalidBodyFormat RuleID = "response.invalid_body_format"
+
+	// RuleResponseBodySchemaInvalid applies when the response body is syntactically
+	// valid for its media type, but does not conform to the schema declared by the
+	// OpenAPI contract.
+	//
+	// For the initial implementation, this rule should focus on JSON response bodies
+	// only, such as application/json and application/*+json.
+	//
+	// Example:
+	//   - contract: GET /users/{id} returns User
+	//   - schema requires: id, email, displayName
+	//   - response body: {"id":"123","email":"john@example.com"}
+	//   - result: missing required field "displayName"
+	//
+	// This rule should run only after body format validation has succeeded. It
+	// assumes the response body can already be parsed, then checks the parsed value
+	// against a supported subset of the OpenAPI schema.
+	//
+	// This rule is evaluated against ResponseJob values.
+	RuleResponseBodySchemaInvalid RuleID = "response.body_schema_invalid"
 )
 
 type Rule interface {
@@ -162,6 +253,15 @@ func NewRuleEngine(registry *ContractRegistry) *RuleEngine {
 
 type ContractRegistry struct {
 	contracts map[string]OpenAPIDoc
+}
+
+func (r *ContractRegistry) HasContract(host string) bool {
+	if r == nil {
+		return false
+	}
+
+	_, ok := r.contracts[strings.ToLower(host)]
+	return ok
 }
 
 func (r *ContractRegistry) FindOperation(host, method, path string) (*OpenAPIOperation, bool) {
@@ -206,7 +306,7 @@ func (r *ContractRegistry) FindMethod(host, method, path string) (*OpenAPIOperat
 	return op, true
 }
 
-func (r *ContractRegistry) FindContentType(host, method, path, contentType string) (mt OpenAPIMediaType, applies, found bool) {
+func (r *ContractRegistry) FindRequestContentType(host, method, path, contentType string) (mt OpenAPIMediaType, applies, found bool) {
 	pathItem, ok := r.FindPathItem(host, path)
 	if !ok {
 		return OpenAPIMediaType{}, false, false
@@ -217,6 +317,8 @@ func (r *ContractRegistry) FindContentType(host, method, path, contentType strin
 		return OpenAPIMediaType{}, false, false
 	}
 
+	contentType = normalizeMediaType(contentType)
+
 	mediaType, ok := op.RequestBody.Content[contentType]
 	if !ok {
 		return OpenAPIMediaType{}, true, false
@@ -225,13 +327,73 @@ func (r *ContractRegistry) FindContentType(host, method, path, contentType strin
 	return mediaType, true, true
 }
 
-func (r *ContractRegistry) FindBody(host, method, path string) (*OpenAPIRequestBody, bool) {
+func (r *ContractRegistry) FindResponseContentType(host, method, path, status, contentType string) (mt OpenAPIMediaType, applies, found bool) {
+	pathItem, ok := r.FindPathItem(host, path)
+	if !ok {
+		return OpenAPIMediaType{}, false, false
+	}
+
+	op := pathItem.OperationForMethod(method)
+	if op == nil {
+		return OpenAPIMediaType{}, false, false
+	}
+
+	res, ok := op.Responses[status]
+	if !ok {
+		res, ok = op.Responses["default"]
+		if !ok {
+			return OpenAPIMediaType{}, false, false
+		}
+	}
+
+	if len(res.Content) == 0 {
+		return OpenAPIMediaType{}, false, false
+	}
+
+	contentType = normalizeMediaType(contentType)
+
+	mediaType, ok := res.Content[contentType]
+	if !ok {
+		return OpenAPIMediaType{}, true, false
+	}
+
+	return mediaType, true, true
+}
+
+func normalizeMediaType(contentType string) string {
+	contentType = strings.ToLower(strings.TrimSpace(contentType))
+
+	if i := strings.Index(contentType, ";"); i >= 0 {
+		contentType = strings.TrimSpace(contentType[:i])
+	}
+
+	return contentType
+}
+
+func (r *ContractRegistry) FindRequestBody(host, method, path string) (*OpenAPIRequestBody, bool) {
 	op, ok := r.FindOperation(host, method, path)
 	if !ok {
 		return nil, false
 	}
 
 	return op.RequestBody, true
+}
+
+func (r *ContractRegistry) FindResponseBody(host, method, path, status string) (*OpenAPIResponse, bool) {
+	op, ok := r.FindOperation(host, method, path)
+	if !ok {
+		return nil, false
+	}
+
+	res, ok := op.Responses[status]
+	if !ok {
+		res, ok = op.Responses["default"]
+		if !ok {
+			return nil, false
+		}
+	}
+
+	return &res, true
 }
 
 func (r *ContractRegistry) ResolveSchemaRef(host, ref string) (*OpenAPISchema, bool) {
@@ -285,12 +447,29 @@ func getRules() []Rule {
 		RequestContentTypeNotAllowed{},
 		RequestBodyMissing{},
 		RequestBodyNotAllowed{},
-		RequestInvalidBodyFormat{},
+		RequestBodyInvalidFormat{},
 		RequestBodySchemaInvalid{},
+		ResponseStatusCodeRule{},
+		ResponseContentTypeNotAllowed{},
+		ResponseBodyMissing{},
+		ResponseBodyNotAllowed{},
+		ResponseBodyInvalidFormat{},
+		ResponseBodySchemaInvalid{},
 	}
 }
 
+// TODO: Update this to allow for custom rules to still apply even if there is no OpenAPI contract (ex. Rule for checking request query for possible SQL injection)
 func (e *RuleEngine) Evaluate(job Job, jobID string) ([]Finding, error) {
+	if e == nil || e.registry == nil {
+		return nil, nil
+	}
+
+	meta := job.Metadata()
+
+	if !e.registry.HasContract(meta.Host) {
+		return nil, nil
+	}
+
 	var findings []Finding
 
 	ctx := RuleContext{

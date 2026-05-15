@@ -192,7 +192,7 @@ func (r RequestContentTypeNotAllowed) Check(ctx RuleContext, job Job, jobID stri
 
 	contentType := requestJob.Headers.Get("Content-Type")
 
-	_, applies, found := ctx.Contracts.FindContentType(
+	_, applies, found := ctx.Contracts.FindRequestContentType(
 		requestJob.Meta.Host,
 		requestJob.Meta.Method,
 		requestJob.Meta.Path,
@@ -240,7 +240,7 @@ func (r RequestBodyMissing) Check(ctx RuleContext, job Job, jobID string) ([]Fin
 		return nil, nil
 	}
 
-	body, found := ctx.Contracts.FindBody(
+	body, found := ctx.Contracts.FindRequestBody(
 		requestJob.Meta.Host,
 		requestJob.Meta.Method,
 		requestJob.Meta.Path,
@@ -290,7 +290,7 @@ func (r RequestBodyNotAllowed) Check(ctx RuleContext, job Job, jobID string) ([]
 		return nil, nil
 	}
 
-	body, found := ctx.Contracts.FindBody(
+	body, found := ctx.Contracts.FindRequestBody(
 		requestJob.Meta.Host,
 		requestJob.Meta.Method,
 		requestJob.Meta.Path,
@@ -324,27 +324,27 @@ func (r RequestBodyNotAllowed) Check(ctx RuleContext, job Job, jobID string) ([]
 	}, nil
 }
 
-type RequestInvalidBodyFormat struct{}
+type RequestBodyInvalidFormat struct{}
 
-func (r RequestInvalidBodyFormat) ID() RuleID {
+func (r RequestBodyInvalidFormat) ID() RuleID {
 	return RuleRequestInvalidBodyFormat
 }
 
-func (r RequestInvalidBodyFormat) Title() string {
-	return "Request body format not allowed"
+func (r RequestBodyInvalidFormat) Title() string {
+	return "Request body has invalid format"
 }
 
-func (r RequestInvalidBodyFormat) AppliesTo() []JobType {
+func (r RequestBodyInvalidFormat) AppliesTo() []JobType {
 	return []JobType{RequestJobType}
 }
 
-func (r RequestInvalidBodyFormat) Check(ctx RuleContext, job Job, jobID string) ([]Finding, error) {
+func (r RequestBodyInvalidFormat) Check(ctx RuleContext, job Job, jobID string) ([]Finding, error) {
 	requestJob, ok := job.(*RequestJob)
 	if !ok {
 		return nil, nil
 	}
 
-	body, found := ctx.Contracts.FindBody(
+	body, found := ctx.Contracts.FindRequestBody(
 		requestJob.Meta.Host,
 		requestJob.Meta.Method,
 		requestJob.Meta.Path,
@@ -522,7 +522,7 @@ func (r RequestBodySchemaInvalid) Check(ctx RuleContext, job Job, jobID string) 
 		return nil, nil
 	}
 
-	body, found := ctx.Contracts.FindBody(
+	body, found := ctx.Contracts.FindRequestBody(
 		requestJob.Meta.Host,
 		requestJob.Meta.Method,
 		requestJob.Meta.Path,

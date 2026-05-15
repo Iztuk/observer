@@ -84,11 +84,11 @@
 
 ### Response-Side API Auditing
 
-- [ ] Validate response status codes
-- [ ] Validate response content type
-- [ ] Validate response body presence/absence
-- [ ] Validate response body format based on contract media type
-- [ ] Validate basic schema conformance for JSON response bodies
+- [x] Validate response status codes
+- [x] Validate response content type
+- [x] Validate response body presence/absence
+- [x] Validate response body format based on contract media type
+- [x] Validate basic schema conformance for JSON response bodies
 
 ---
 
