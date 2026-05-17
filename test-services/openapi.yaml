@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Observer Test Service
   version: 1.0.0
-  description: Simple service for testing CodeForge Observer request, response, timeout, and upstream failure behavior.
+  description: Simple service for testing Observer request, response, timeout, and upstream failure behavior.
 
 servers:
   - url: http://localhost:8081

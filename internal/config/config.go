@@ -40,12 +40,12 @@ type ProcessConfig struct {
 var AppRunTimeConfig RunTimeConfig
 
 var AppProcessConfig ProcessConfig = ProcessConfig{
-	PidFile:  "/tmp/cf-observer.pid",
-	LogFile:  "/tmp/cf-observer.log",
-	SockFile: "/tmp/cf-observer.sock",
+	PidFile:  "/tmp/observer.pid",
+	LogFile:  "/tmp/observer.log",
+	SockFile: "/tmp/observer.sock",
 }
 
-const defaultConfigYAML = `# CodeForge Observer
+const defaultConfigYAML = `# Observer
 runtime:
   listen: ":8080"
 
@@ -65,7 +65,7 @@ func ConfigDir() (string, error) {
 		return "", fmt.Errorf("get user config dir: %w", err)
 	}
 
-	return filepath.Join(baseDir, "codeforge-observer"), nil
+	return filepath.Join(baseDir, "observer"), nil
 }
 
 func ConfigFilePath() (string, error) {

@@ -1,14 +1,14 @@
 package daemon
 
 import (
-	"cf-observer/internal/audit"
-	"cf-observer/internal/config"
-	"cf-observer/internal/proxy"
 	"context"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"observer/internal/audit"
+	"observer/internal/config"
+	"observer/internal/proxy"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,7 +21,7 @@ func RunDaemon(hosts map[string]config.Host) error {
 		return fmt.Errorf("failed to open log file: %w", err)
 	}
 
-	logger := log.New(f, "cf-observer: ", log.LstdFlags)
+	logger := log.New(f, "observer: ", log.LstdFlags)
 
 	defer func() {
 		if err := f.Close(); err != nil {

@@ -1,8 +1,6 @@
 package proxy
 
 import (
-	"cf-observer/internal/audit"
-	"cf-observer/internal/config"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -12,6 +10,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"observer/internal/audit"
+	"observer/internal/config"
 	"strings"
 	"time"
 )

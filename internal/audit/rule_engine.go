@@ -1,8 +1,8 @@
 package audit
 
 import (
-	"cf-observer/internal/config"
 	"fmt"
+	"observer/internal/config"
 	"os"
 	"path/filepath"
 	"strings"
@@ -413,7 +413,7 @@ func NewContractRegistry(hosts map[string]config.Host) (*ContractRegistry, error
 		return nil, err
 	}
 
-	configPath := filepath.Join(baseDir, "codeforge-observer", "config.yaml")
+	configPath := filepath.Join(baseDir, "observer", "config.yaml")
 
 	for hostName, host := range hosts {
 		if host.APIContractPath == "" {

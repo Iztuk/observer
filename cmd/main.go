@@ -1,12 +1,12 @@
 package main
 
 import (
-	"cf-observer/internal/audit"
-	"cf-observer/internal/config"
-	"cf-observer/internal/daemon"
 	"flag"
 	"fmt"
 	"log"
+	"observer/internal/audit"
+	"observer/internal/config"
+	"observer/internal/daemon"
 	"os"
 )
 
@@ -41,7 +41,7 @@ func main() {
 				log.Fatal(err)
 			}
 
-			dbPath := configDir + "/cf-observer.db"
+			dbPath := configDir + "/observer.db"
 			err = audit.InitDatabase(dbPath, *resetDB)
 			if err != nil {
 				log.Fatal(err)
@@ -60,7 +60,7 @@ func main() {
 				log.Fatal(err)
 			}
 
-			dbPath := configDir + "/cf-observer.db"
+			dbPath := configDir + "/observer.db"
 			if *resetDB {
 				err = audit.InitDatabase(dbPath, *resetDB)
 				if err != nil {
@@ -91,12 +91,12 @@ func main() {
 }
 
 func printRootUsage() {
-	fmt.Println("Usage: cf-observer <command> [options]")
+	fmt.Println("Usage: observer <command> [options]")
 	fmt.Println()
 	fmt.Println("Commands:")
 	fmt.Println("  init      Initialize the config directory and default configuration")
 	fmt.Println("  start     Start the observer daemon")
 	fmt.Println("  stop      Stop the observer daemon")
 	fmt.Println()
-	fmt.Println("Run 'cf-observer <command> -h' for command-specific help")
+	fmt.Println("Run 'observer <command> -h' for command-specific help")
 }

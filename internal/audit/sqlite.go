@@ -149,7 +149,7 @@ func (s *SQLiteStore) SaveAuditResult(ctx context.Context, job Job, jobID string
 }
 
 func (s *SQLiteStore) Connect(configDir string, logger *log.Logger) error {
-	dbPath := filepath.Join(configDir, "cf-observer.db")
+	dbPath := filepath.Join(configDir, "observer.db")
 
 	var err error
 	s.db, err = sql.Open("sqlite", dbPath)

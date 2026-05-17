@@ -1,4 +1,4 @@
-module cf-observer
+module observer
 
 go 1.26.2
 

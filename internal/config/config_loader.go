@@ -17,7 +17,7 @@ func LoadConfigFile() (map[string]Host, error) {
 		return map[string]Host{}, err
 	}
 
-	configPath = filepath.Join(baseDir, "codeforge-observer", "config.yaml")
+	configPath = filepath.Join(baseDir, "observer", "config.yaml")
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
