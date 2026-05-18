@@ -96,7 +96,7 @@
 
 ### Custom Rules Contract Integration
 
-- [ ] Load custom rules contract files per host
+- [x] Load custom rules contract files per host
 - [ ] Validate custom rules contract structure at startup
 - [ ] Bind custom rules contracts to configured hosts
 - [ ] Support custom rules contracts in YAML

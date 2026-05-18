@@ -14,9 +14,10 @@ type Config struct {
 }
 
 type Host struct {
-	UpstreamRaw     string   `yaml:"upstream"`
-	Upstream        *url.URL `yaml:"-"`
-	APIContractPath string   `yaml:"api_contract"`
+	UpstreamRaw       string   `yaml:"upstream"`
+	Upstream          *url.URL `yaml:"-"`
+	APIContractPath   string   `yaml:"api_contract"`
+	RulesContractPath string   `yaml:"rules_contract"`
 }
 
 type RunTimeConfig struct {

@@ -253,6 +253,7 @@ func NewRuleEngine(registry *ContractRegistry) *RuleEngine {
 
 type ContractRegistry struct {
 	contracts map[string]OpenAPIDoc
+	rules     map[string]HostRulesDoc
 }
 
 func (r *ContractRegistry) HasContract(host string) bool {
@@ -407,6 +408,7 @@ func (r *ContractRegistry) ResolveSchemaRef(host, ref string) (*OpenAPISchema, b
 
 func NewContractRegistry(hosts map[string]config.Host) (*ContractRegistry, error) {
 	contracts := make(map[string]OpenAPIDoc)
+	rules := make(map[string]HostRulesDoc)
 
 	baseDir, err := os.UserConfigDir()
 	if err != nil {
@@ -431,10 +433,27 @@ func NewContractRegistry(hosts map[string]config.Host) (*ContractRegistry, error
 		}
 
 		contracts[strings.ToLower(hostName)] = contract
+
+		if host.RulesContractPath == "" {
+			continue
+		}
+
+		rulesPath := host.RulesContractPath
+		if !filepath.IsAbs(rulesPath) {
+			rulesPath = filepath.Join(filepath.Dir(configPath), rulesPath)
+		}
+
+		rulesDoc, err := LoadRulesDocument(rulesPath)
+		if err != nil {
+			return nil, fmt.Errorf("load rules file for host %q: %w", hostName, err)
+		}
+
+		rules[strings.ToLower(hostName)] = rulesDoc
 	}
 
 	return &ContractRegistry{
 		contracts: contracts,
+		rules:     rules,
 	}, nil
 }
 
