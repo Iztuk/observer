@@ -1,0 +1,36 @@
+rules:
+  request.query.sql_injection:
+    name: Detect SQL injection in query parameters
+    enabled: true
+    job_type: request
+    type: query
+    description: Detects SQL injection-like patterns in query parameter values.
+    match:
+      paths:
+        - "*"
+      methods:
+        - GET
+      patterns:
+        - target: query
+          name: "*"
+          pattern: "(?i)(union\\s+select|or\\s+1=1|drop\\s+table)"
+    finding:
+      title: Possible SQL injection attempt
+      message: Request query parameter matched a suspicious SQL injection pattern.
+
+  request.query.debug_enabled:
+    name: Detect debug mode query parameter
+    enabled: true
+    job_type: request
+    type: query
+    description: Detects requests that enable debug mode through query parameters.
+    match:
+      paths:
+        - "*"
+      methods:
+        - GET
+      query_params:
+        debug: "true"
+    finding:
+      title: Debug query parameter enabled
+      message: Request included debug=true in the query string.

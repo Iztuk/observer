@@ -78,9 +78,10 @@ func (c *Config) ValidateHostUrls() (map[string]Host, error) {
 		}
 
 		c.Hosts[key] = Host{
-			UpstreamRaw:     host.UpstreamRaw,
-			Upstream:        u,
-			APIContractPath: host.APIContractPath,
+			UpstreamRaw:       host.UpstreamRaw,
+			Upstream:          u,
+			APIContractPath:   host.APIContractPath,
+			RulesContractPath: host.RulesContractPath,
 		}
 	}
 

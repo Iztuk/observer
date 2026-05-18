@@ -253,6 +253,7 @@ func NewRuleEngine(registry *ContractRegistry) *RuleEngine {
 
 type ContractRegistry struct {
 	contracts map[string]OpenAPIDoc
+	rules     map[string]HostRulesDoc
 }
 
 func (r *ContractRegistry) HasContract(host string) bool {
@@ -407,6 +408,7 @@ func (r *ContractRegistry) ResolveSchemaRef(host, ref string) (*OpenAPISchema, b
 
 func NewContractRegistry(hosts map[string]config.Host) (*ContractRegistry, error) {
 	contracts := make(map[string]OpenAPIDoc)
+	rules := make(map[string]HostRulesDoc)
 
 	baseDir, err := os.UserConfigDir()
 	if err != nil {
@@ -416,25 +418,42 @@ func NewContractRegistry(hosts map[string]config.Host) (*ContractRegistry, error
 	configPath := filepath.Join(baseDir, "observer", "config.yaml")
 
 	for hostName, host := range hosts {
-		if host.APIContractPath == "" {
-			continue
+		lowerHost := strings.ToLower(hostName)
+
+		if host.APIContractPath != "" {
+			contractPath := host.APIContractPath
+			if !filepath.IsAbs(contractPath) {
+				contractPath = filepath.Join(filepath.Dir(configPath), contractPath)
+			}
+
+			contract, err := LoadOpenAPIDocument(contractPath)
+			if err != nil {
+				return nil, fmt.Errorf("load api contract for host %q: %w", hostName, err)
+			}
+
+			contracts[lowerHost] = contract
+
 		}
 
-		contractPath := host.APIContractPath
-		if !filepath.IsAbs(contractPath) {
-			contractPath = filepath.Join(filepath.Dir(configPath), contractPath)
+		if host.RulesContractPath != "" {
+			rulesPath := host.RulesContractPath
+			if !filepath.IsAbs(rulesPath) {
+				rulesPath = filepath.Join(filepath.Dir(configPath), rulesPath)
+			}
+
+			rulesDoc, err := LoadRulesDocument(rulesPath)
+			if err != nil {
+				return nil, fmt.Errorf("load rules file for host %q: %w", hostName, err)
+			}
+
+			rules[lowerHost] = rulesDoc
 		}
 
-		contract, err := LoadOpenAPIDocument(contractPath)
-		if err != nil {
-			return nil, fmt.Errorf("load api contract for host %q: %w", hostName, err)
-		}
-
-		contracts[strings.ToLower(hostName)] = contract
 	}
 
 	return &ContractRegistry{
 		contracts: contracts,
+		rules:     rules,
 	}, nil
 }
 
