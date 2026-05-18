@@ -97,11 +97,11 @@
 ### Custom Rules Contract Integration
 
 - [x] Load custom rules contract files per host
-- [ ] Validate custom rules contract structure at startup
+- [x] Validate custom rules contract structure at startup
 - [ ] Bind custom rules contracts to configured hosts
-- [ ] Support custom rules contracts in YAML
-- [ ] Support custom rules contracts in JSON
-- [ ] Generate clear errors for invalid custom rules contracts
+- [x] Support custom rules contracts in YAML
+- [x] Support custom rules contracts in JSON
+- [x] Generate clear errors for invalid custom rules contracts
 
 ### Custom Rule Matching
 

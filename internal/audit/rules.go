@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -78,5 +79,57 @@ func LoadRulesDocument(path string) (HostRulesDoc, error) {
 		return HostRulesDoc{}, fmt.Errorf("unsupported Host Rules document type: %s", path)
 	}
 
+	if err := validateRulesDocument(doc); err != nil {
+		return HostRulesDoc{}, err
+	}
+
 	return doc, nil
+}
+
+func validateRulesDocument(doc HostRulesDoc) error {
+	if len(doc.Rules) == 0 {
+		return nil
+	}
+
+	for ruleID, rule := range doc.Rules {
+		if strings.TrimSpace(ruleID) == "" {
+			return fmt.Errorf("host rule id cannot be empty")
+		}
+
+		if strings.TrimSpace(rule.Name) == "" {
+			return fmt.Errorf("host rule %q missing name", ruleID)
+		}
+
+		if rule.JobType == "" {
+			return fmt.Errorf("host rule %q missing job_type", ruleID)
+		}
+
+		if rule.Type == "" {
+			return fmt.Errorf("host rule %q missing type", ruleID)
+		}
+
+		if strings.TrimSpace(rule.Finding.Title) == "" {
+			return fmt.Errorf("host rule %q missing finding.title", ruleID)
+		}
+
+		if strings.TrimSpace(rule.Finding.Message) == "" {
+			return fmt.Errorf("host rule %q missing finding.message", ruleID)
+		}
+
+		for _, pattern := range rule.Match.Patterns {
+			if strings.TrimSpace(pattern.Target) == "" {
+				return fmt.Errorf("host rule %q has pattern with missing target", ruleID)
+			}
+
+			if strings.TrimSpace(pattern.Pattern) == "" {
+				return fmt.Errorf("host rule %q has pattern with missing regex", ruleID)
+			}
+
+			if _, err := regexp.Compile(pattern.Pattern); err != nil {
+				return fmt.Errorf("host rule %q has invalid regex pattern %q: %w", ruleID, pattern.Pattern, err)
+			}
+		}
+	}
+
+	return nil
 }
