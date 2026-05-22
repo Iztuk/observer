@@ -16,11 +16,10 @@ type HostRulesDoc struct {
 }
 
 type HostRule struct {
-	Name        string   `json:"name" yaml:"name"`
-	Enabled     bool     `json:"enabled" yaml:"enabled"`
-	JobType     JobType  `json:"job_type" yaml:"job_type"`
-	Type        RuleType `json:"type" yaml:"type"`
-	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
+	Enabled     bool      `json:"enabled" yaml:"enabled"`
+	AppliesTo   []JobType `json:"applies_to" yaml:"applies_to"`
+	Type        RuleType  `json:"type" yaml:"type"`
+	Description string    `json:"description,omitempty" yaml:"description,omitempty"`
 
 	Match   RuleMatch   `json:"match" yaml:"match"`
 	Finding RuleFinding `json:"finding" yaml:"finding"`
@@ -46,9 +45,10 @@ type RuleMatch struct {
 }
 
 type RulePattern struct {
-	Target  TargetType `json:"target" yaml:"target"`                 // query, header, path, field
-	Name    string     `json:"name,omitempty" yaml:"name,omitempty"` // param/header/field name
-	Pattern string     `json:"pattern" yaml:"pattern"`               // regex
+	Target  TargetType     `json:"target" yaml:"target"`                 // query, header, path, field
+	Name    string         `json:"name,omitempty" yaml:"name,omitempty"` // param/header/field name
+	Pattern string         `json:"pattern" yaml:"pattern"`               // regex
+	Regex   *regexp.Regexp `json:"-" yaml:"-"`
 }
 
 type TargetType string
@@ -92,6 +92,27 @@ func LoadRulesDocument(path string) (HostRulesDoc, error) {
 		return HostRulesDoc{}, err
 	}
 
+	// Precompile regex patterns after validation
+	for ruleID, rule := range doc.Rules {
+		for i := range rule.Match.Patterns {
+			pattern := rule.Match.Patterns[i]
+
+			re, err := regexp.Compile(pattern.Pattern)
+			if err != nil {
+				return HostRulesDoc{}, fmt.Errorf(
+					"host rule %q has invalid regex pattern %q: %w",
+					ruleID,
+					pattern.Pattern,
+					err,
+				)
+			}
+
+			rule.Match.Patterns[i].Regex = re
+		}
+
+		doc.Rules[ruleID] = rule
+	}
+
 	return doc, nil
 }
 
@@ -105,13 +126,9 @@ func validateRulesDocument(doc HostRulesDoc) error {
 			return fmt.Errorf("host rule id cannot be empty")
 		}
 
-		if strings.TrimSpace(rule.Name) == "" {
-			return fmt.Errorf("host rule %q missing name", ruleID)
-		}
-
-		if rule.JobType == "" {
-			return fmt.Errorf("host rule %q missing job_type", ruleID)
-		}
+		// if len(rule.AppliesTo) == 0 {
+		// 	return fmt.Errorf("host rule %q missing applies_to", ruleID)
+		// }
 
 		if rule.Type == "" {
 			return fmt.Errorf("host rule %q missing type", ruleID)

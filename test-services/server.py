@@ -59,7 +59,7 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
 
         if path == "/health":
-            self._send_json(200, {})
+            self._send_json(200, {"status": "ok"})
             return
 
         if path == "/users":
