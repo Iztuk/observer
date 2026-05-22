@@ -105,27 +105,18 @@
 
 ### Custom Rule Matching
 
-- [x] Scope custom rules by configured host
-- [x] Match custom rules by job type
 - [ ] Match custom rules by HTTP method
-- [x] Match custom rules by path regex patterns
 - [ ] Match custom rules by exact path
 - [ ] Match custom rules by OpenAPI-style path parameters
 - [ ] Match custom rules by wildcard path patterns
-- [ ] Match request custom rules by request headers
-- [ ] Match response custom rules by response status codes
-- [ ] Match response custom rules by response headers
-- [ ] Match custom rules by content type
+- [ ] Match custom rules by request headers
+- [ ] Match custom rules by response status codes
+- [ ] Match custom rules by response headers
 
 ### Request-Side Custom Rule Auditing
 
-- [x] Evaluate request path custom rules
-- [ ] Evaluate request query parameter exact-match rules
-- [ ] Evaluate request query parameter regex-pattern rules
 - [ ] Validate required request headers
 - [ ] Validate disallowed request headers
-- [ ] Validate request header exact-match rules
-- [ ] Validate request header regex-pattern rules
 - [ ] Validate required request content types
 - [ ] Validate disallowed request content types
 - [ ] Validate required JSON request fields
@@ -134,27 +125,20 @@
 
 ### Response-Side Custom Rule Auditing
 
-- [ ] Evaluate response status code exact-match rules
-- [ ] Evaluate response status code range/pattern rules
 - [ ] Validate required response headers
 - [ ] Validate disallowed response headers
-- [ ] Validate response header exact-match rules
-- [ ] Validate response header regex-pattern rules
-- [ ] Validate required response content types
-- [ ] Validate disallowed response content types
+- [ ] Validate expected response status code patterns
 - [ ] Validate disallowed JSON response fields
 - [ ] Detect sensitive field exposure in response bodies
 - [ ] Detect sensitive values in response bodies
 
 ### Custom Rule Findings
 
-- [x] Generate findings for custom rule violations
-- [x] Include custom rule ID in generated findings
-- [x] Include custom rule title or name in generated findings
-- [ ] Include matched target details in generated findings
+- [ ] Generate findings for custom rule violations
+- [ ] Include custom rule ID in generated findings
+- [ ] Include custom rule title or name in generated findings
 - [ ] Include custom severity level when provided
 - [ ] Include custom remediation guidance when provided
-- [ ] Store custom rule findings using the same persistence flow as built-in findings
 
 ---
 

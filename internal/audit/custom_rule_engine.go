@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"net/http"
 	"strings"
 	"time"
 
@@ -18,11 +19,34 @@ func (r HostRule) AppliesToJob(job Job) bool {
 
 	meta := job.Metadata()
 
+	if !pathMatchesAny(r.Match.Paths, meta.Path) {
+		return false
+	}
+
 	if !methodMatches(r.Match.Methods, meta.Method) {
 		return false
 	}
 
-	if !pathMatchesAny(r.Match.Paths, meta.Path) {
+	switch job.JobType() {
+	case RequestJobType:
+		req, ok := job.(*RequestJob)
+		if !ok {
+			return false
+		}
+
+		if !headerMatches(r.Match.Headers, req.Headers) {
+			return false
+		}
+	case ResponseJobType:
+		res, ok := job.(*ResponseJob)
+		if !ok {
+			return false
+		}
+
+		if !headerMatches(r.Match.Headers, res.Headers) {
+			return false
+		}
+	default:
 		return false
 	}
 
@@ -36,20 +60,6 @@ func jobTypeMatches(supported []JobType, actual JobType) bool {
 
 	for _, jobType := range supported {
 		if jobType == actual {
-			return true
-		}
-	}
-
-	return false
-}
-
-func methodMatches(methods []string, actual string) bool {
-	if len(methods) == 0 {
-		return true
-	}
-
-	for _, method := range methods {
-		if strings.EqualFold(method, actual) {
 			return true
 		}
 	}
@@ -92,14 +102,47 @@ func pathMatches(pattern, actual string) bool {
 	return false
 }
 
+func methodMatches(methods []string, actual string) bool {
+	if len(methods) == 0 {
+		return true
+	}
+
+	for _, method := range methods {
+		if strings.EqualFold(method, actual) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func headerMatches(headers map[string][]string, actual http.Header) bool {
+	if len(headers) == 0 {
+		return true
+	}
+
+	if _, ok := headers["*"]; ok {
+		return len(actual) > 0
+	}
+
+	for key := range headers {
+		if actual.Get(key) != "" {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (r HostRule) CheckHostRule(job Job, jobID, ruleID string) ([]Finding, error) {
 	var findings []Finding
 
 	switch r.Type {
 	case RuleTypePath:
 		findings = append(findings, r.EvaluatePath(job.Metadata(), jobID, ruleID)...)
-	case RuleTypeQuery:
+
 	case RuleTypeHeader:
+	case RuleTypeQuery:
 	case RuleTypeBodyField:
 	default:
 		return nil, nil
