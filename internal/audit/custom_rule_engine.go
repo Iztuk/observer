@@ -28,6 +28,7 @@ func (r HostRule) AppliesToJob(job Job) bool {
 		return false
 	}
 
+	var body any
 	switch job.JobType() {
 	case RequestJobType:
 		req, ok := job.(*RequestJob)
@@ -38,6 +39,10 @@ func (r HostRule) AppliesToJob(job Job) bool {
 		if !headerMatches(r.Match.Headers, req.Headers) {
 			return false
 		}
+
+		if !bodyFieldMatches(r.Match.Fields, body) {
+			return false
+		}
 	case ResponseJobType:
 		res, ok := job.(*ResponseJob)
 		if !ok {
@@ -45,6 +50,10 @@ func (r HostRule) AppliesToJob(job Job) bool {
 		}
 
 		if !headerMatches(r.Match.Headers, res.Headers) {
+			return false
+		}
+
+		if !bodyFieldMatches(r.Match.Fields, body) {
 			return false
 		}
 	default:
@@ -157,6 +166,46 @@ func queryParamsMatches(expected map[string][]string, rawQuery string) bool {
 		if _, ok := vals[key]; ok {
 			return true
 		}
+	}
+
+	return false
+}
+
+func bodyFieldMatches(expected []string, actual any) bool {
+	if len(expected) == 0 {
+		return true
+	}
+
+	for _, fieldName := range expected {
+		parts := strings.Split(fieldName, ".")
+
+		if traverseBody(actual, parts) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func traverseBody(val any, fields []string) bool {
+	field := fields[0]
+
+	switch v := val.(type) {
+	case map[string]any:
+		obj, ok := v[field]
+		if !ok {
+			return false
+		}
+
+		return traverseBody(obj, fields[1:])
+	case []any:
+		for _, item := range v {
+			if traverseBody(item, fields) {
+				return true
+			}
+		}
+
+		return false
 	}
 
 	return false

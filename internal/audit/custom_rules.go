@@ -35,13 +35,12 @@ const (
 )
 
 type RuleMatch struct {
-	Paths        []string            `json:"paths,omitempty" yaml:"paths,omitempty"`
-	Methods      []string            `json:"methods,omitempty" yaml:"methods,omitempty"`
-	Headers      map[string][]string `json:"headers,omitempty" yaml:"headers,omitempty"`
-	QueryParams  map[string][]string `json:"query_params,omitempty" yaml:"query_params,omitempty"`
-	ContentTypes []string            `json:"content_types,omitempty" yaml:"content_types,omitempty"`
-	Fields       []string            `json:"fields,omitempty" yaml:"fields,omitempty"`
-	Patterns     []RulePattern       `json:"patterns,omitempty" yaml:"patterns,omitempty"`
+	Paths       []string            `json:"paths,omitempty" yaml:"paths,omitempty"`
+	Methods     []string            `json:"methods,omitempty" yaml:"methods,omitempty"`
+	Headers     map[string][]string `json:"headers,omitempty" yaml:"headers,omitempty"`
+	QueryParams map[string][]string `json:"query_params,omitempty" yaml:"query_params,omitempty"`
+	Fields      []string            `json:"fields,omitempty" yaml:"fields,omitempty"`
+	Patterns    []RulePattern       `json:"patterns,omitempty" yaml:"patterns,omitempty"`
 }
 
 type RulePattern struct {
