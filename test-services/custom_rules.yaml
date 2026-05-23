@@ -1,7 +1,8 @@
 rules:
   request.query.sql_injection:
     enabled: true
-    job_type: request
+    applies_to:
+      - request
     type: query
     description: Detects SQL injection-like patterns in query parameter values.
     match:
@@ -19,7 +20,8 @@ rules:
 
   request.query.debug_enabled:
     enabled: true
-    job_type: request
+    applies_to:
+      - request
     type: query
     description: Detects requests that enable debug mode through query parameters.
     match:
@@ -28,10 +30,50 @@ rules:
       methods:
         - GET
       query_params:
-        debug: "true"
+        debug:
+          - "true"
     finding:
       title: Debug query parameter enabled
       message: Request included debug=true in the query string.
+
+  request.query.risky_mode:
+    enabled: true
+    applies_to:
+      - request
+    type: query
+    description: Detects risky mode values in query parameters.
+    match:
+      paths:
+        - "*"
+      methods:
+        - GET
+      query_params:
+        mode:
+          - debug
+          - admin
+          - test
+    finding:
+      title: Risky mode query parameter
+      message: Request included a risky mode query parameter value.
+
+  request.header.debug_header:
+    enabled: true
+    applies_to:
+      - request
+    type: header
+    description: Detects requests that include debug-related request headers.
+    match:
+      paths:
+        - "*"
+      methods:
+        - GET
+      headers:
+        X-Debug:
+          - "true"
+    finding:
+      title: Debug header enabled
+      message: Request included X-Debug=true.
+
   request.path.sensitive_route_access:
     enabled: true
     applies_to:
