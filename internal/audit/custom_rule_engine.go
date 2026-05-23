@@ -215,10 +215,26 @@ func traverseBody(val any, fields []string) bool {
 func (r HostRule) CheckHostRule(job Job, jobID, ruleID string) ([]Finding, error) {
 	var findings []Finding
 
+	if !r.AppliesToJob(job) {
+		return nil, nil
+	}
+
 	switch r.Type {
 	case RuleTypePath:
 		findings = append(findings, r.EvaluatePath(job.Metadata(), jobID, ruleID)...)
 	case RuleTypeHeader:
+		switch job.JobType() {
+		case RequestJobType:
+			req, ok := job.(*RequestJob)
+			if ok {
+				findings = append(findings, r.EvaluateHeader(req.Headers, jobID, ruleID)...)
+			}
+		case ResponseJobType:
+			res, ok := job.(*ResponseJob)
+			if ok {
+				findings = append(findings, r.EvaluateHeader(res.Headers, jobID, ruleID)...)
+			}
+		}
 	case RuleTypeQuery:
 		findings = append(findings, r.EvaluateQueryParams(job.Metadata(), jobID, ruleID)...)
 	case RuleTypeBodyField:
@@ -227,6 +243,17 @@ func (r HostRule) CheckHostRule(job Job, jobID, ruleID string) ([]Finding, error
 	}
 
 	return findings, nil
+}
+
+func (r HostRule) newCustomFinding(jobID, ruleID string) Finding {
+	return Finding{
+		ID:        uuid.NewString(),
+		JobID:     jobID,
+		RuleID:    ruleID,
+		Title:     r.Finding.Title,
+		Message:   r.Finding.Message,
+		CreatedAt: time.Now().UTC(),
+	}
 }
 
 func (r HostRule) EvaluatePath(meta Metadata, jobID, ruleID string) []Finding {
@@ -243,19 +270,104 @@ func (r HostRule) EvaluatePath(meta Metadata, jobID, ruleID string) []Finding {
 
 		if re.MatchString(meta.Path) {
 			return []Finding{
-				{
-					ID:        uuid.NewString(),
-					JobID:     jobID,
-					RuleID:    ruleID,
-					Title:     r.Finding.Title,
-					Message:   r.Finding.Message,
-					CreatedAt: time.Now().UTC(),
-				},
+				r.newCustomFinding(jobID, ruleID),
 			}
 		}
 	}
 
 	return nil
+}
+
+func (r HostRule) EvaluateHeader(header http.Header, jobID, ruleID string) []Finding {
+	if len(header) == 0 {
+		return nil
+	}
+
+	if len(r.Match.Headers) != 0 && headerExactMatch(r.Match.Headers, header) {
+		return []Finding{
+			r.newCustomFinding(jobID, ruleID),
+		}
+	}
+
+	if len(r.Match.Patterns) != 0 && headerPatternMatch(r.Match.Patterns, header) {
+		return []Finding{
+			r.newCustomFinding(jobID, ruleID),
+		}
+	}
+
+	return nil
+}
+
+func headerExactMatch(expected map[string][]string, actual http.Header) bool {
+	if len(expected) == 0 {
+		return false
+	}
+
+	for name, expectedValues := range expected {
+		if name == "*" {
+			return len(actual) > 0
+		}
+
+		actualValues := actual.Values(name)
+		if len(actualValues) == 0 {
+			continue
+		}
+
+		// If no expected values are configured, treat header presence as a match.
+		if len(expectedValues) == 0 {
+			return true
+		}
+
+		for _, expectedValue := range expectedValues {
+			for _, actualValue := range actualValues {
+				if expectedValue == "*" {
+					return true
+				}
+
+				if strings.EqualFold(
+					strings.TrimSpace(actualValue),
+					strings.TrimSpace(expectedValue),
+				) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+func headerPatternMatch(patterns []RulePattern, actual http.Header) bool {
+	for _, pattern := range patterns {
+		if pattern.Target != TargetTypeHeader {
+			continue
+		}
+
+		if pattern.Regex == nil {
+			continue
+		}
+
+		if pattern.Name == "*" || pattern.Name == "" {
+			for _, values := range actual {
+				for _, value := range values {
+					if pattern.Regex.MatchString(value) {
+						return true
+					}
+				}
+			}
+
+			continue
+		}
+
+		values := actual.Values(pattern.Name)
+		for _, value := range values {
+			if pattern.Regex.MatchString(value) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func (r HostRule) EvaluateQueryParams(meta Metadata, jobID, ruleID string) []Finding {
@@ -284,27 +396,13 @@ func (r HostRule) EvaluateQueryParams(meta Metadata, jobID, ruleID string) []Fin
 
 	if queryParamExactMatch(r.Match.QueryParams, vals) {
 		return []Finding{
-			{
-				ID:        uuid.NewString(),
-				JobID:     jobID,
-				RuleID:    ruleID,
-				Title:     r.Finding.Title,
-				Message:   r.Finding.Message,
-				CreatedAt: time.Now().UTC(),
-			},
+			r.newCustomFinding(jobID, ruleID),
 		}
 	}
 
 	if queryParamPatternMatch(r.Match.Patterns, vals) {
 		return []Finding{
-			{
-				ID:        uuid.NewString(),
-				JobID:     jobID,
-				RuleID:    ruleID,
-				Title:     r.Finding.Title,
-				Message:   r.Finding.Message,
-				CreatedAt: time.Now().UTC(),
-			},
+			r.newCustomFinding(jobID, ruleID),
 		}
 	}
 

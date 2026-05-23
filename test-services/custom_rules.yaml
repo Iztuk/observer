@@ -75,7 +75,7 @@ rules:
       message: Request included X-Debug=true.
 
   request.path.sensitive_route_access:
-    enabled: true
+    enabled: false
     applies_to:
       - request
     type: path
