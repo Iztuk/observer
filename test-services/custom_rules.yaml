@@ -91,3 +91,41 @@ rules:
     finding:
       title: Sensitive path requested
       message: Request path matched a sensitive or internal route pattern.
+
+  response.body.access_token_value:
+    enabled: false
+    applies_to:
+      - response
+    type: body_field
+    description: Detects token-like values at tokens.accessToken.
+    match:
+      paths:
+        - /leaky-user
+      methods:
+        - GET
+      patterns:
+        - target: field
+          name: tokens.accessToken
+          pattern: "(?i)fake-access-token"
+    finding:
+      title: Access token value exposed
+      message: Response body exposed a token-like value at tokens.accessToken.
+
+  response.body.sensitive_field_exact_match:
+    enabled: true
+    applies_to:
+      - response
+    type: body_field
+    description: Detects exact sensitive field paths exposed in JSON response bodies.
+    match:
+      paths:
+        - /leaky-user
+      methods:
+        - GET
+      fields:
+        - passwordHash
+        - tokens.accessToken
+        - tokens.refreshToken
+    finding:
+      title: Sensitive field exposed
+      message: Response body contained an exact sensitive field path.

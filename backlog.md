@@ -102,43 +102,40 @@
 - [x] Support custom rules contracts in YAML
 - [x] Support custom rules contracts in JSON
 - [x] Generate clear errors for invalid custom rules contracts
+- [x] Precompile custom rule regex patterns at startup
 
-### Custom Rule Matching
+### Custom Rule Engine
 
-- [ ] Match custom rules by HTTP method
-- [ ] Match custom rules by exact path
-- [ ] Match custom rules by OpenAPI-style path parameters
-- [ ] Match custom rules by wildcard path patterns
-- [ ] Match custom rules by request headers
-- [ ] Match custom rules by response status codes
-- [ ] Match custom rules by response headers
+- [x] Scope custom rules by configured host
+- [x] Skip disabled custom rules
+- [x] Match custom rules by job type
+- [x] Match custom rules by HTTP method
+- [x] Match custom rules by exact path
+- [x] Match custom rules by OpenAPI-style path parameters
+- [x] Match custom rules by wildcard path patterns
+- [x] Dispatch custom rules by rule type
+- [x] Evaluate request custom rules
+- [x] Evaluate response custom rules
 
-### Request-Side Custom Rule Auditing
+### Custom Rule Type Evaluation
 
-- [ ] Validate required request headers
-- [ ] Validate disallowed request headers
-- [ ] Validate required request content types
-- [ ] Validate disallowed request content types
-- [ ] Validate required JSON request fields
-- [ ] Validate disallowed JSON request fields
-- [ ] Detect sensitive values in request bodies
-
-### Response-Side Custom Rule Auditing
-
-- [ ] Validate required response headers
-- [ ] Validate disallowed response headers
-- [ ] Validate expected response status code patterns
-- [ ] Validate disallowed JSON response fields
-- [ ] Detect sensitive field exposure in response bodies
-- [ ] Detect sensitive values in response bodies
+- [x] Evaluate path rules using regex patterns
+- [x] Evaluate query rules using exact query parameter matches
+- [x] Evaluate query rules using regex patterns
+- [x] Evaluate header rules using exact header matches
+- [x] Evaluate header rules using regex patterns
+- [x] Evaluate body field rules using exact field path matches
+- [x] Evaluate body field rules using regex patterns
+- [x] Support dot-path matching for nested JSON body fields
+- [x] Support dot-path regex matching for nested JSON body values
 
 ### Custom Rule Findings
 
-- [ ] Generate findings for custom rule violations
-- [ ] Include custom rule ID in generated findings
-- [ ] Include custom rule title or name in generated findings
-- [ ] Include custom severity level when provided
-- [ ] Include custom remediation guidance when provided
+- [x] Generate findings for custom rule violations
+- [x] Include custom rule ID in generated findings
+- [x] Include custom rule title in generated findings
+- [x] Include custom rule message in generated findings
+- [x] Store custom rule findings using the same persistence flow as built-in findings
 
 ---
 
