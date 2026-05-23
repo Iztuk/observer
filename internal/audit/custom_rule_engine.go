@@ -2,6 +2,7 @@ package audit
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -47,6 +48,10 @@ func (r HostRule) AppliesToJob(job Job) bool {
 			return false
 		}
 	default:
+		return false
+	}
+
+	if !queryParamsMatches(r.Match.QueryParams, meta.Query) {
 		return false
 	}
 
@@ -134,13 +139,35 @@ func headerMatches(headers map[string][]string, actual http.Header) bool {
 	return false
 }
 
+func queryParamsMatches(expected map[string][]string, rawQuery string) bool {
+	if len(expected) == 0 {
+		return true
+	}
+
+	vals, err := url.ParseQuery(rawQuery)
+	if err != nil {
+		return false
+	}
+
+	if _, ok := expected["*"]; ok {
+		return len(vals) > 0
+	}
+
+	for key := range expected {
+		if _, ok := vals[key]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (r HostRule) CheckHostRule(job Job, jobID, ruleID string) ([]Finding, error) {
 	var findings []Finding
 
 	switch r.Type {
 	case RuleTypePath:
 		findings = append(findings, r.EvaluatePath(job.Metadata(), jobID, ruleID)...)
-
 	case RuleTypeHeader:
 	case RuleTypeQuery:
 	case RuleTypeBodyField:
