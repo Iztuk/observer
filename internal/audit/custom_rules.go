@@ -133,6 +133,10 @@ func validateRulesDocument(doc HostRulesDoc) error {
 			return fmt.Errorf("host rule %q missing type", ruleID)
 		}
 
+		if !isValidRuleType(rule.Type) {
+			return fmt.Errorf("host rule %q has unsupported type %q", ruleID, rule.Type)
+		}
+
 		if strings.TrimSpace(rule.Finding.Title) == "" {
 			return fmt.Errorf("host rule %q missing finding.title", ruleID)
 		}
@@ -182,6 +186,15 @@ func isValidTargetType(target TargetType) bool {
 		TargetTypeHeader,
 		TargetTypePath,
 		TargetTypeField:
+		return true
+	default:
+		return false
+	}
+}
+
+func isValidRuleType(ruleType RuleType) bool {
+	switch ruleType {
+	case RuleTypePath, RuleTypeQuery, RuleTypeHeader, RuleTypeBodyField:
 		return true
 	default:
 		return false

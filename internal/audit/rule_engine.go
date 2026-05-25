@@ -510,7 +510,7 @@ func (e *RuleEngine) Evaluate(job Job, jobID string) ([]Finding, error) {
 
 	customRules, ok := e.registry.rules[strings.ToLower(meta.Host)]
 	if !ok {
-		return nil, nil
+		return findings, nil
 	}
 
 	for ruleID, rule := range customRules.Rules {
@@ -540,6 +540,10 @@ func ruleApplies(rule Rule, jobType JobType) bool {
 }
 
 func customRuleApplies(rule HostRule, jobType JobType) bool {
+	if len(rule.AppliesTo) == 0 {
+		return true
+	}
+
 	for _, t := range rule.AppliesTo {
 		if t == jobType {
 			return true

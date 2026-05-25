@@ -55,7 +55,7 @@ func (r HostRule) AppliesToJob(job Job) bool {
 		return false
 	}
 
-	if !queryParamsMatches(r.Match.QueryParams, meta.Query) {
+	if r.Type != RuleTypeQuery && !queryParamsMatches(r.Match.QueryParams, meta.Query) {
 		return false
 	}
 
@@ -230,8 +230,8 @@ func unmarshalJSONBody(data []byte, jobID, ruleID string) (any, []Finding) {
 				ID:        uuid.NewString(),
 				JobID:     jobID,
 				RuleID:    ruleID,
-				Title:     "",
-				Message:   "",
+				Title:     "JSON body parsing failed",
+				Message:   fmt.Sprintf("Observer could not parse JSON body while evaluating custom rule %q: %v", ruleID, err),
 				CreatedAt: time.Now().UTC(),
 			},
 		}
@@ -260,6 +260,10 @@ func (r HostRule) EvaluatePath(meta Metadata, jobID, ruleID string) []Finding {
 		re := pattern.Regex
 
 		if pattern.Target != TargetTypePath {
+			continue
+		}
+
+		if re == nil {
 			continue
 		}
 
