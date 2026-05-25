@@ -11,6 +11,17 @@ USERS = [
 
 PROFILES = []
 
+SENSITIVE_USER = {
+    "id": "1",
+    "email": "john@example.com",
+    "displayName": "John",
+    "passwordHash": "fake-hash-for-testing",
+    "tokens": {
+        "accessToken": "fake-access-token",
+        "refreshToken": "fake-refresh-token"
+    }
+}
+
 
 class Handler(BaseHTTPRequestHandler):
     def _send_json(self, status_code, payload):
@@ -59,7 +70,11 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
 
         if path == "/health":
-            self._send_json(200, {})
+            self._send_json(200, {"status": "ok"})
+            return
+
+        if path == "/leaky-user":
+            self._send_json(200, SENSITIVE_USER)
             return
 
         if path == "/users":

@@ -508,12 +508,44 @@ func (e *RuleEngine) Evaluate(job Job, jobID string) ([]Finding, error) {
 		findings = append(findings, ruleFindings...)
 	}
 
+	customRules, ok := e.registry.rules[strings.ToLower(meta.Host)]
+	if !ok {
+		return findings, nil
+	}
+
+	for ruleID, rule := range customRules.Rules {
+		if !customRuleApplies(rule, job.JobType()) || !rule.Enabled {
+			continue
+		}
+
+		ruleFindings, err := rule.CheckHostRule(job, jobID, ruleID)
+		if err != nil {
+			return nil, err
+		}
+
+		findings = append(findings, ruleFindings...)
+	}
+
 	return findings, nil
 }
 
 func ruleApplies(rule Rule, jobType JobType) bool {
 	for _, supported := range rule.AppliesTo() {
 		if supported == jobType {
+			return true
+		}
+	}
+
+	return false
+}
+
+func customRuleApplies(rule HostRule, jobType JobType) bool {
+	if len(rule.AppliesTo) == 0 {
+		return true
+	}
+
+	for _, t := range rule.AppliesTo {
+		if t == jobType {
 			return true
 		}
 	}

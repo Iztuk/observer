@@ -1,8 +1,8 @@
 rules:
   request.query.sql_injection:
-    name: Detect SQL injection in query parameters
     enabled: true
-    job_type: request
+    applies_to:
+      - request
     type: query
     description: Detects SQL injection-like patterns in query parameter values.
     match:
@@ -19,9 +19,9 @@ rules:
       message: Request query parameter matched a suspicious SQL injection pattern.
 
   request.query.debug_enabled:
-    name: Detect debug mode query parameter
     enabled: true
-    job_type: request
+    applies_to:
+      - request
     type: query
     description: Detects requests that enable debug mode through query parameters.
     match:
@@ -30,7 +30,102 @@ rules:
       methods:
         - GET
       query_params:
-        debug: "true"
+        debug:
+          - "true"
     finding:
       title: Debug query parameter enabled
       message: Request included debug=true in the query string.
+
+  request.query.risky_mode:
+    enabled: true
+    applies_to:
+      - request
+    type: query
+    description: Detects risky mode values in query parameters.
+    match:
+      paths:
+        - "*"
+      methods:
+        - GET
+      query_params:
+        mode:
+          - debug
+          - admin
+          - test
+    finding:
+      title: Risky mode query parameter
+      message: Request included a risky mode query parameter value.
+
+  request.header.debug_header:
+    enabled: true
+    applies_to:
+      - request
+    type: header
+    description: Detects requests that include debug-related request headers.
+    match:
+      paths:
+        - "*"
+      methods:
+        - GET
+      headers:
+        X-Debug:
+          - "true"
+    finding:
+      title: Debug header enabled
+      message: Request included X-Debug=true.
+
+  request.path.sensitive_route_access:
+    enabled: false
+    applies_to:
+      - request
+    type: path
+    description: Detects requests to sensitive or internal-looking paths.
+    match:
+      paths:
+        - "*"
+      methods:
+        - GET
+      patterns:
+        - target: path
+          pattern: "(?i)^/(health|admin|internal|debug|actuator|metrics|server-status)(/.*)?$"
+    finding:
+      title: Sensitive path requested
+      message: Request path matched a sensitive or internal route pattern.
+
+  response.body.access_token_value:
+    enabled: false
+    applies_to:
+      - response
+    type: body_field
+    description: Detects token-like values at tokens.accessToken.
+    match:
+      paths:
+        - /leaky-user
+      methods:
+        - GET
+      patterns:
+        - target: field
+          name: tokens.accessToken
+          pattern: "(?i)fake-access-token"
+    finding:
+      title: Access token value exposed
+      message: Response body exposed a token-like value at tokens.accessToken.
+
+  response.body.sensitive_field_exact_match:
+    enabled: true
+    applies_to:
+      - response
+    type: body_field
+    description: Detects exact sensitive field paths exposed in JSON response bodies.
+    match:
+      paths:
+        - /leaky-user
+      methods:
+        - GET
+      fields:
+        - passwordHash
+        - tokens.accessToken
+        - tokens.refreshToken
+    finding:
+      title: Sensitive field exposed
+      message: Response body contained an exact sensitive field path.
